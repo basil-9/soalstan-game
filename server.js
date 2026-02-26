@@ -8,16 +8,18 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-app.use(express.static(__dirname)); // للسماح بالوصول لملفات الصور والـ CSS
+// للسماح بالوصول لملفات الصور والـ CSS والـ JS
+app.use(express.static(__dirname)); 
 
 app.get('/', (req, res) => { res.sendFile(path.join(__dirname, 'index.html')); });
 
-// 1. تحميل الأسئلة من الملف الخارجي (الـ 1000 سؤال)
+// 1. تحميل الأسئلة مع التأكد من المسار الصحيح للسيرفر
 let questionBank = [];
 let usedQuestions = []; 
 
 try {
-    const data = fs.readFileSync('questions.json', 'utf8');
+    const questionsPath = path.join(__dirname, 'questions.json');
+    const data = fs.readFileSync(questionsPath, 'utf8');
     questionBank = JSON.parse(data);
     console.log(`✅ تم تحميل ${questionBank.length} سؤال بنجاح!`);
 } catch (err) {
@@ -25,21 +27,29 @@ try {
 }
 
 let players = 0;
-// تهيئة النقاط للفريقين
 let teams = { 'أ': { points: 100 }, 'ب': { points: 100 } };
 
 io.on('connection', (socket) => {
     players++;
-    const team = players % 2 !== 0 ? 'أ' : 'ب'; // توزيع عادل للفريقين
+    // توزيع عادل للفريقين
+    const team = players % 2 !== 0 ? 'أ' : 'ب'; 
+    
+    // إبلاغ اللاعب بفريقه ونقاط البداية
     socket.emit('init', { team, pointsA: teams['أ'].points, pointsB: teams['ب'].points });
+
+    // استقبال بيانات اللاعب عند الانضمام (الاسم والفريق)
+    socket.on('playerJoin', (data) => {
+        socket.playerName = data.name;
+        socket.playerTeam = data.team;
+        console.log(`👤 انضم البطل: ${data.name} لفريق ${data.team}`);
+    });
 
     // 2. استقبال طلب المزاد مع المستوى المختار
     socket.on('requestAuction', (data) => {
-        const level = data.level || 'medium'; // افتراضي متوسط إذا لم يحدد
+        const level = data.level || 'medium';
         
         if (usedQuestions.length >= questionBank.length) usedQuestions = [];
 
-        // اختيار سؤال عشوائي لم يستخدم
         let q;
         const availableQuestions = questionBank.filter(item => !usedQuestions.includes(item.q));
         
@@ -52,7 +62,6 @@ io.on('connection', (socket) => {
 
         usedQuestions.push(q.q);
         
-        // إرسال المستوى والتلميح للكل
         io.emit('startAuction', { 
             hint: q.hint, 
             fullQuestion: q, 
@@ -61,12 +70,17 @@ io.on('connection', (socket) => {
     });
 
     socket.on('placeBid', (data) => {
-        io.emit('updateBid', { team: data.team, amount: data.amount });
+        // نمرر الاسم للسماح بظهور "المزايد الحالي"
+        io.emit('updateBid', { 
+            team: data.team, 
+            amount: data.amount, 
+            name: data.name 
+        });
     });
 
     // 3. إرساء المزاد وتحديد مدة العداد بناءً على المستوى
     socket.on('winAuction', (data) => {
-        let duration = 15; // الافتراضي للمتوسط
+        let duration = 15;
         const level = data.level || 'medium';
 
         if (level === 'easy') duration = 20;
@@ -80,12 +94,13 @@ io.on('connection', (socket) => {
 
     socket.on('submitAnswer', (data) => {
         const isCorrect = data.answer === data.correct;
-        // نظام المكافأة والعقاب
+        
         if(isCorrect) teams[data.team].points += 50;
         else teams[data.team].points -= 30;
 
         io.emit('roundResult', { 
             team: data.team, 
+            playerName: data.name,
             isCorrect, 
             points: teams[data.team].points 
         });
@@ -94,4 +109,6 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => { players--; });
 });
 
-server.listen(3000, () => console.log('🚀 مزاد سؤالستان المطور يعمل على المنفذ 3000'));
+// تعديل هام جداً ليعمل على Render (استخدام المنفذ المتاح أو 3000)
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => console.log(`🚀 مزاد سؤالستان المطور يعمل على المنفذ ${PORT}`));
