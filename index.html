@@ -2,65 +2,90 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>سؤالستان - نسخة المشرف</title>
+    <title>سؤالستان - تجربة كاملة</title>
     <style>
         :root { --bg-blue: #1e40af; --gold: #facc15; --gold-dark: #ca8a04; }
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; text-align: center; background: radial-gradient(circle, #1e40af 0%, #1e3a8a 100%); margin: 0; min-height: 100vh; color: white; }
-        .screen { display: none; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+        
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
+        
+        body { background: radial-gradient(circle, #1e40af 0%, #1e3a8a 100%); color: white; display: flex; align-items: center; justify-content: center; }
+
+        .screen { display: none; flex-direction: column; width: 100vw; height: 100vh; padding: 20px; box-sizing: border-box; }
         .active-screen { display: flex; }
-        .card { background: white; padding: 30px; border-radius: 25px; display: inline-block; width: 95%; max-width: 600px; color: #333; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .btn-main { background: var(--gold); color: #000; padding: 12px 25px; font-size: 18px; font-weight: bold; border: 3px solid #000; border-radius: 10px; cursor: pointer; margin: 5px; box-shadow: 0 4px 0 var(--gold-dark); }
-        .input-style { padding: 12px; width: 80%; border-radius: 10px; border: 2px solid #000; margin-bottom: 10px; text-align: center; font-size: 16px; }
-        .header { display: flex; justify-content: space-between; margin-bottom: 15px; font-weight: bold; }
-        .auction-box { background: #fffbeb; border: 2px solid #fbbf24; padding: 15px; border-radius: 15px; margin: 10px 0; }
-        .opt-btn { padding: 15px; font-size: 18px; background: #2563eb; color: white; border: none; border-radius: 8px; cursor: pointer; margin: 5px; width: 100%; }
-        #admin-badge { display: none; background: gold; color: black; font-weight: bold; padding: 5px; border-radius: 5px; margin-bottom: 10px; border: 1px solid black; }
+
+        .card { 
+            background: white; color: #333; border-radius: 30px; 
+            width: 95%; height: 90%; max-width: 1300px; 
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6); 
+            display: flex; flex-direction: column; padding: 40px; box-sizing: border-box;
+            justify-content: space-between; position: relative;
+        }
+
+        /* تنسيق النصوص الضخمة */
+        h1 { font-size: 50px; margin: 0; color: #1e40af; }
+        #question-text { font-size: 55px; font-weight: 900; line-height: 1.2; color: #1e40af; margin: 20px 0; }
+        #hint-label { font-size: 35px; background: #fff9c4; padding: 20px; border-radius: 20px; border: 3px dashed #facc15; }
+
+        .header { display: flex; justify-content: space-between; font-size: 30px; font-weight: bold; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        
+        /* شبكة الخيارات */
+        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%; }
+        .opt-btn { padding: 35px; font-size: 32px; font-weight: bold; background: #2563eb; color: white; border: none; border-radius: 20px; cursor: pointer; transition: 0.2s; }
+        .opt-btn:hover { background: #1e3a8a; transform: translateY(-5px); }
+
+        .input-style { padding: 20px; width: 60%; border-radius: 15px; border: 4px solid #000; font-size: 24px; text-align: center; margin-bottom: 20px; }
+        
+        .btn-main { background: var(--gold); padding: 20px 40px; font-size: 24px; font-weight: bold; border: 4px solid #000; border-radius: 15px; cursor: pointer; box-shadow: 0 8px 0 var(--gold-dark); margin: 10px; }
+        .btn-main:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--gold-dark); }
+
+        #admin-badge { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); background: #000; color: gold; padding: 10px 30px; border-radius: 50px; font-weight: bold; font-size: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
     </style>
 </head>
 <body>
 
 <div id="join-screen" class="screen active-screen">
-    <div class="card">
-        <h1>🌙 سؤالستان 🔨</h1>
-        <input type="text" id="player-name" class="input-style" placeholder="اسم البطل">
-        <input type="text" id="room-id" class="input-style" placeholder="كود الغرفة">
-        <div style="display: flex; gap: 10px; justify-content: center;">
-            <button class="btn-main" style="background:#3b82f6; color:white;" onclick="joinGame('أ')">فريق أ</button>
-            <button class="btn-main" style="background:#ef4444; color:white;" onclick="joinGame('ب')">فريق ب</button>
+    <div class="card" style="justify-content: center; align-items: center;">
+        <h1>🔨 مـزاد سؤالسـتان 🔨</h1>
+        <p style="font-size: 24px;">نظام الغرف الخاصة المتطور</p>
+        <input type="text" id="player-name" class="input-style" placeholder="اسـم البطل">
+        <input type="text" id="room-id" class="input-style" placeholder="كـود الغرفة">
+        <div style="display: flex; gap: 20px;">
+            <button class="btn-main" style="background:#3b82f6; color:white;" onclick="joinGame('أ')">فـريق أ</button>
+            <button class="btn-main" style="background:#ef4444; color:white;" onclick="joinGame('ب')">فـريق ب</button>
         </div>
     </div>
 </div>
 
 <div id="main-game-screen" class="screen">
     <div class="card">
-        <div id="admin-badge">👑 أنت مشرف الغرفة (Admin)</div>
-        <h2 id="welcome-msg" style="margin: 5px 0;"></h2>
+        <div id="admin-badge" style="display:none;">👑 أنـت مـشرف الغـرفة</div>
         <div class="header">
             <div style="color: #1e3a8a;">فريق أ: <span id="pts-أ">100</span></div>
+            <div id="room-info" style="font-size: 18px; color: #888;"></div>
             <div style="color: #dc2626;">فريق ب: <span id="pts-ب">100</span></div>
         </div>
 
-        <div id="level-selector" style="display:none; border-top: 1px solid #ccc; padding-top: 10px;">
-            <p style="font-size: 14px;">تحكم المشرف: ابدأ الجولة</p>
-            <button class="btn-main" onclick="requestNewAuction('easy')">سهل</button>
-            <button class="btn-main" onclick="requestNewAuction('medium')">متوسط</button>
-            <button class="btn-main" onclick="requestNewAuction('hard')">صعب</button>
+        <div id="level-selector" style="display:none;">
+            <button class="btn-main" onclick="requestNewAuction('easy')">سـهل</button>
+            <button class="btn-main" onclick="requestNewAuction('medium')">متوسـط</button>
+            <button class="btn-main" onclick="requestNewAuction('hard')">صعـب</button>
         </div>
 
-        <div class="auction-box">
-            <h3 id="hint-label">بانتظار المشرف...</h3>
-            <div id="bid-ui" style="display:none;">
-                <p>أعلى مزاد: <mark id="high-bid">0</mark> (<span id="high-team">-</span>)</p>
-                <button onclick="bid(10)">+10</button>
-                <button id="win-btn" style="display:none; background:black; color:white; border-radius:5px;" onclick="win()">إرساء 🏁</button>
+        <div id="auction-container">
+            <div id="hint-label">بانتظار المشرف لبدء الجولة...</div>
+            <div id="bid-ui" style="display:none; margin-top: 30px;">
+                <p style="font-size: 35px;">المزاد الحالي: <mark id="high-bid">0</mark> بواسطة <span id="high-team">-</span></p>
+                <button class="btn-main" onclick="bid(10)">+10</button>
+                <button id="win-btn" class="btn-main" style="display:none; background:black; color:white;" onclick="win()">إرساء المزاد 🏁</button>
             </div>
         </div>
 
         <div id="game-play" style="display:none;">
-            <h2 id="question-text"></h2>
-            <div id="options-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;"></div>
+            <div id="question-text"></div>
+            <div class="options-grid" id="options-container"></div>
         </div>
-        <div id="result-msg" style="font-weight:bold; margin-top:10px;"></div>
+        
+        <div id="result-msg" style="font-size: 30px; font-weight: bold;"></div>
     </div>
 </div>
 
@@ -77,7 +102,7 @@
         myName = name; myRoom = room; myTeam = teamLetter;
         document.getElementById('join-screen').style.display = 'none';
         document.getElementById('main-game-screen').style.display = 'flex';
-        document.getElementById('welcome-msg').innerText = `البطل ${myName} (فريق ${myTeam})`;
+        document.getElementById('room-info').innerText = `غرفة: ${room}`;
         
         socket.emit('joinRoom', { name, roomID: room, team: teamLetter });
     }
@@ -85,8 +110,7 @@
     socket.on('init', data => {
         document.getElementById('pts-أ').innerText = data.pointsA;
         document.getElementById('pts-ب').innerText = data.pointsB;
-        isAdmin = data.isAdmin;
-        if (isAdmin) {
+        if (data.isAdmin) {
             document.getElementById('admin-badge').style.display = 'block';
             document.getElementById('level-selector').style.display = 'block';
             document.getElementById('win-btn').style.display = 'inline-block';
@@ -99,6 +123,7 @@
         document.getElementById('hint-label').innerText = "تلميح: " + data.hint;
         document.getElementById('bid-ui').style.display = "block";
         document.getElementById('game-play').style.display = "none";
+        document.getElementById('result-msg').innerText = "";
         currentQ = data.fullQuestion; currentBid = 0;
         document.getElementById('high-bid').innerText = "0";
         document.getElementById('high-team').innerText = "-";
@@ -116,7 +141,7 @@
 
     socket.on('revealQuestion', data => {
         document.getElementById('bid-ui').style.display = "none";
-        document.getElementById('game-play').style.display = "block";
+        document.getElementById('game-play').style.display = "flex";
         document.getElementById('question-text').innerText = data.question.q;
         const container = document.getElementById('options-container');
         container.innerHTML = '';
@@ -130,13 +155,14 @@
     });
 
     socket.on('roundResult', data => {
-        alert(`${data.playerName}: ${data.isCorrect ? "✅ صح" : "❌ خطأ"}`);
+        const status = data.isCorrect ? "✅ صحيحة!" : "❌ خاطئة!";
+        document.getElementById('result-msg').innerText = `${data.playerName}: إجابة ${status}`;
         document.getElementById(`pts-${data.team}`).innerText = data.points;
         document.getElementById('game-play').style.display = "none";
-        document.getElementById('hint-label').innerText = "بانتظار المشرف...";
     });
 </script>
 </body>
 </html>
+
 
 
