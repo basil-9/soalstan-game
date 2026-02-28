@@ -25,7 +25,7 @@ io.on('connection', (socket) => {
         if (!roomsData[roomID]) {
             roomsData[roomID] = {
                 teams: { 'أ': { points: 100, leader: socket.id }, 'ب': { points: 100, leader: null } },
-                settings: settings || { roundTime: 30, maxRounds: 10 },
+                settings: settings,
                 currentQuestion: null, turnTaken: false
             };
         } else if (!roomsData[roomID].teams[team].leader) {
@@ -64,6 +64,7 @@ io.on('connection', (socket) => {
     socket.on('placeBid', (d) => io.to(socket.currentRoom).emit('updateBid', d));
 });
 server.listen(process.env.PORT || 3000);
+
 
 
 
