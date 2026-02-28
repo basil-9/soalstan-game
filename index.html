@@ -21,6 +21,7 @@
         
         .input-box { background: rgba(255,255,255,0.05); border: 1px solid var(--main); color: white; padding: 10px; border-radius: 12px; text-align: center; font-size: 16px; width: 100%; margin: 5px 0; box-sizing: border-box; }
 
+        /* تعديل شكل القوائم المنسدلة لتكون داكنة */
         .select-box { background: #1e1b4b; border: 2px solid var(--main); color: white; padding: 10px; border-radius: 12px; text-align: center; font-size: 16px; width: 100%; margin: 5px 0; cursor: pointer; outline: none; appearance: none; -webkit-appearance: none; }
         .select-box option { background-color: #0b0e14; color: white; }
 
@@ -29,13 +30,12 @@
         .how-to-play li { font-size: 13px; color: rgba(255,255,255,0.8); margin-bottom: 5px; }
 
         #result-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 85%; padding: 25px; border-radius: 20px; display: none; text-align: center; z-index: 200; backdrop-filter: blur(15px); border: 4px solid; background: rgba(0,0,0,0.95); box-sizing: border-box; }
-        .q-image { max-width: 100%; border-radius: 15px; margin-bottom: 10px; border: 2px solid var(--main); }
+        .q-image { max-width: 100%; max-height: 250px; border-radius: 15px; margin-bottom: 10px; border: 2px solid var(--main); object-fit: contain; }
 
-        /* شريط المعلومات الجديد المتوافق مع طلبك */
+        /* شريط المعلومات العلوي الجديد للعداد والساعة */
         .top-info-bar { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 15px; width: 100%; position: relative; margin-bottom: 10px; box-sizing: border-box; }
-        #real-time-clock { position: absolute; left: 50%; transform: translateX(-50%); color: var(--gold); font-weight: bold; font-size: 14px; border: 1px solid rgba(250, 204, 21, 0.3); padding: 2px 8px; border-radius: 8px; }
-        
-        #win-screen { display:none; text-align:center; width: 100%; padding: 40px 10px; z-index: 300; }
+        #real-time-clock { position: absolute; left: 50%; transform: translateX(-50%); color: var(--gold); font-weight: bold; font-size: 14px; border: 1px solid rgba(250, 204, 21, 0.3); padding: 2px 8px; border-radius: 8px; white-space: nowrap; }
+        #win-screen { display:none; text-align:center; width: 100%; padding: 30px 10px; z-index: 300; }
     </style>
 </head>
 <body>
@@ -99,18 +99,18 @@
         </div>
 
         <div class="top-info-bar">
-            <div id="round-counter" style="color: var(--gold); font-weight: bold; font-size: 13px;">جولة: <span id="current-round">1</span>/10</div>
+            <div id="round-counter" style="color: var(--gold); font-weight: bold; font-size: 13px;">جولة: <span id="current-round">1</span>/<span id="total-rounds">10</span></div>
             <div id="real-time-clock">00:00:00</div>
             <div style="font-size: 13px;">A: <span id="pts-A">100</span> | B: <span id="pts-B">100</span></div>
         </div>
 
         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 10px;">
             <div id="leader-tag" style="display:none; color: var(--gold); font-weight: bold; font-size: 12px;">👑 قائد</div>
-            <div onclick="copyRoomCode()" style="font-size: 12px; cursor: pointer;"><span id="display-room-id">---</span> 📋</div>
+            <div onclick="copyRoomCode()" style="font-size: 12px; cursor: pointer; color: #cbd5e1;"><span id="display-room-id">---</span> 📋</div>
         </div>
 
         <div id="win-screen" class="animate__animated zoomIn">
-            <h1 style="font-size: 40px; color: var(--gold); text-shadow: 0 0 20px var(--gold);">🏆 مبروك لقد ربحت!</h1>
+            <h1 style="font-size: 35px; color: var(--gold); text-shadow: 0 0 20px var(--gold);">🏆 مبروك لقد ربحت!</h1>
             <h2 id="winner-text" style="color: white; margin: 20px 0;"></h2>
             <button class="btn-game" onclick="location.reload()">لعب مرة أخرى 🔄</button>
         </div>
@@ -145,7 +145,7 @@
     const socket = io();
     let myInfo = {}, isLeader = false, currentQ = {}, timerInt, roomSettings = {};
 
-    // تحديث ساعة الوقت الفعلي
+    // دالة تحديث ساعة الوقت الفعلي
     function updateClock() {
         const now = new Date();
         const timeString = now.toLocaleTimeString('ar-SA', { hour12: false });
@@ -173,16 +173,21 @@
         const mr = parseInt(document.getElementById('set-rounds').value);
         if(!n || !r) return alert("أكمل البيانات");
         myInfo = { name: n, room: r, team: t };
+        
         document.getElementById('display-room-id').innerText = r;
+        document.getElementById('total-rounds').innerText = mr; // تحديث إجمالي الجولات
+        
         document.getElementById('join-screen').style.display = 'none';
         document.getElementById('game-screen').style.display = 'flex';
-        document.getElementById('exit-btn').style.display = 'block';
+        document.getElementById('exit-btn').style.display = 'block'; 
         socket.emit('joinRoom', { ...myInfo, settings: { roundTime: mt, maxRounds: mr } });
     }
 
     function exitGame() {
         playSnd('click');
-        location.reload(); 
+        document.getElementById('game-screen').style.display = 'none';
+        document.getElementById('exit-btn').style.display = 'none';
+        document.getElementById('join-screen').style.display = 'flex';
     }
 
     socket.on('init', d => {
@@ -197,7 +202,7 @@
         document.getElementById('current-round').innerText = d.roundNumber;
         document.getElementById('auction-area').style.display = 'block';
         document.getElementById('question-area').style.display = 'none'; 
-        document.getElementById('win-screen').style.display = 'none';
+        document.getElementById('win-screen').style.display = 'none'; // إخفاء شاشة الفوز
         document.getElementById('hint-text').innerText = "تلميح: " + d.hint;
         document.getElementById('current-bid').innerText = '0';
         if(isLeader) { document.getElementById('bid-ui').style.display = 'block'; document.getElementById('win-btn').style.display = 'none'; }
@@ -209,8 +214,10 @@
 
     socket.on('revealQuestion', d => {
         const content = document.getElementById('q-content'); content.innerHTML = '';
-        // تعديل لعرض الصور بناءً على رابطquestions.json
+        
+        // 🔥 التعديل الحاسم هنا: تغيير image إلى img ليطابق ملف الأسئلة שלך 🔥
         if (d.question.img) content.innerHTML += `<img src="${d.question.img}" class="q-image">`;
+        
         content.innerHTML += `<h1 style="font-size: 24px; color: var(--main); margin: 0;">${d.question.q}</h1>`;
         renderOptions(d.question.options);
         document.getElementById('auction-area').style.display = 'none';
@@ -264,12 +271,14 @@
         }, 3000);
     });
 
-    // شاشة الفوز النهائية
+    // إضافة استجابة شاشة الفوز
     socket.on('gameOver', d => {
         document.getElementById('auction-area').style.display = 'none';
         document.getElementById('question-area').style.display = 'none';
+        document.getElementById('timer-container').style.display = 'none';
         document.getElementById('win-screen').style.display = 'block';
-        const winner = d.pointsA > d.pointsB ? "الفريق A" : "الفريق B";
+        
+        const winner = d.pointsA > d.pointsB ? "الفريق A" : (d.pointsB > d.pointsA ? "الفريق B" : "تعادل!");
         document.getElementById('winner-text').innerText = `الفريق الفائز هو: ${winner}`;
         playSnd('correct');
     });
