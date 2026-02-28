@@ -1,174 +1,135 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <title>سؤالستان - Arcade Edition</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
-    <style>
-        :root { 
-            --arcade-bg: #5c3bcf; /* البنفسجي من الصورة */
-            --arcade-yellow: #ffd700; /* الأصفر من الصورة */
-            --arcade-white: #ffffff;
-            --stroke: #000000;
-        }
+const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
+const path = require('path');
+const fs = require('fs'); 
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, { cors: { origin: "*" } });
+
+app.use(express.static(__dirname)); 
+
+// قراءة ملف الأسئلة - تأكد من وجود ملف questions.json في نفس المجلد
+let questionBank = [];
+try {
+    questionBank = JSON.parse(fs.readFileSync(path.join(__dirname, 'questions.json'), 'utf8'));
+} catch (err) {
+    console.error("خطأ في قراءة ملف الأسئلة:", err);
+}
+
+let roomsData = {};
+
+io.on('connection', (socket) => {
+    // معالجة دخول الغرفة وتعيين القادة بناءً على التصميم الجديد
+    socket.on('joinRoom', (data) => {
+        const { room, name, team, settings } = data; // استخدام room ليتطابق مع index.html
+        const roomID = room;
         
-        body { 
-            margin: 0; 
-            background-color: var(--arcade-bg);
-            /* تأثير النقاط في الخلفية */
-            background-image: radial-gradient(#4a2db0 15%, transparent 15%);
-            background-size: 25px 25px;
-            color: white; 
-            font-family: 'Arial', sans-serif; 
-            height: 100vh; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            overflow: hidden; 
+        socket.join(roomID);
+        socket.currentRoom = roomID;
+
+        // إنشاء بيانات الغرفة إذا لم تكن موجودة
+        if (!roomsData[roomID]) {
+            roomsData[roomID] = {
+                teams: { 
+                    'أ': { points: 100, leader: socket.id }, 
+                    'ب': { points: 100, leader: null } 
+                },
+                settings: settings || { roundTime: 30, maxRounds: 10 },
+                currentQuestion: null,
+                turnTaken: false
+            };
+        } else if (!roomsData[roomID].teams[team].leader) {
+            // تعيين القائد للفريق إذا كان المنصب شاغراً
+            roomsData[roomID].teams[team].leader = socket.id;
         }
 
-        /* تنسيق العنوان الكبير "لمحة" */
-        .logo-text {
-            font-size: 90px;
-            color: var(--arcade-yellow);
-            text-shadow: 6px 6px 0px var(--stroke);
-            margin: 0;
-            font-weight: 900;
+        const roomData = roomsData[roomID];
+        
+        // إرسال البيانات الأولية للواجهة لتحديث النقاط وحالة القائد
+        socket.emit('init', { 
+            pointsA: roomData.teams['أ'].points, 
+            pointsB: roomData.teams['ب'].points, 
+            isLeader: socket.id === roomData.teams[team].leader, 
+            settings: roomData.settings 
+        });
+    });
+
+    // طلب مزاد جديد (سؤال جديد) من قبل القائد
+    socket.on('requestAuction', () => {
+        const room = roomsData[socket.currentRoom];
+        if (!room) return;
+
+        const q = questionBank[Math.floor(Math.random() * questionBank.length)];
+        room.currentQuestion = q;
+        room.turnTaken = false;
+        
+        // إرسال التلميح للجميع لبدء المزاد
+        io.to(socket.currentRoom).emit('startAuction', { 
+            hint: q.hint, 
+            fullQuestion: q 
+        });
+    });
+
+    // معالجة الإجابات وتحديث النقاط (كسب 50 أو خسارة 30)
+    socket.on('submitAnswer', (data) => {
+        const room = roomsData[socket.currentRoom];
+        if (!room) return;
+
+        const isCorrect = data.answer === room.currentQuestion.a;
+        
+        if (isCorrect) {
+            room.teams[data.team].points += 50;
+            io.to(socket.currentRoom).emit('roundResult', { 
+                isCorrect: true, 
+                team: data.team, 
+                points: room.teams[data.team].points, 
+                name: data.name, 
+                correctAns: room.currentQuestion.a 
+            });
+        } else {
+            room.teams[data.team].points -= 30;
+            
+            // إذا كان هذا أول خطأ، يتم نقل السؤال للفريق الآخر مع حذف إجابة
+            if (!room.turnTaken) {
+                room.turnTaken = true;
+                const wrongOptions = room.currentQuestion.options.filter(o => o !== room.currentQuestion.a);
+                const newOptions = [room.currentQuestion.a, wrongOptions[0], wrongOptions[1]].sort(() => Math.random() - 0.5);
+                
+                io.to(socket.currentRoom).emit('passTurn', { 
+                    toTeam: data.team === 'أ' ? 'ب' : 'أ', 
+                    newOptions: newOptions, 
+                    points: room.teams[data.team].points 
+                });
+            } else {
+                // إذا أخطأ الفريقان، تنتهي الجولة
+                io.to(socket.currentRoom).emit('roundResult', { 
+                    isCorrect: false, 
+                    team: data.team, 
+                    points: room.teams[data.team].points, 
+                    name: data.name, 
+                    correctAns: room.currentQuestion.a 
+                });
+            }
         }
+    });
 
-        .sub-logo {
-            font-size: 20px;
-            background: rgba(0,0,0,0.2);
-            padding: 5px 15px;
-            border-radius: 10px;
-            margin-bottom: 30px;
-        }
+    // أحداث المزاد (إرساء السؤال وتحديث المزايدة)
+    socket.on('winAuction', (d) => io.to(socket.currentRoom).emit('revealQuestion', d));
+    socket.on('placeBid', (d) => io.to(socket.currentRoom).emit('updateBid', d));
 
-        /* تنسيق الأزرار كبلاطات بيضاء */
-        .btn-arcade {
-            background: var(--arcade-white);
-            border: 4px solid var(--stroke);
-            border-radius: 20px;
-            color: var(--stroke);
-            padding: 15px 25px;
-            font-size: 22px;
-            font-weight: bold;
-            cursor: pointer;
-            width: 100%;
-            margin-bottom: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: 0.2s;
-        }
+    // تنظيف البيانات عند الخروج (اختياري)
+    socket.on('disconnect', () => {
+        console.log('لاعب غادر الغرفة');
+    });
+});
 
-        .btn-arcade:hover { transform: translateY(-3px); box-shadow: 0 5px 0 var(--stroke); }
-        .btn-arcade:active { transform: translateY(0); }
-
-        /* زر ابدأ الآن (أصفر) */
-        .btn-start { background: var(--arcade-yellow); }
-
-        .input-arcade {
-            background: rgba(255,255,255,0.1);
-            border: 2px solid var(--arcade-yellow);
-            color: white;
-            padding: 12px;
-            border-radius: 15px;
-            text-align: center;
-            font-size: 18px;
-            width: 100%;
-            margin: 5px 0;
-        }
-
-        /* حاوية اللعبة */
-        .card { 
-            background: var(--arcade-bg);
-            border: 8px solid var(--stroke);
-            border-radius: 40px; 
-            width: 90vw; height: 90vh; 
-            padding: 30px; 
-            position: relative; 
-            box-shadow: 20px 20px 0px rgba(0,0,0,0.2);
-        }
-
-        #timer-container { position: absolute; top: 0; left: 0; width: 100%; height: 12px; background: #333; display: none; }
-        #timer-bar { height: 100%; width: 100%; background: var(--arcade-yellow); transition: 1s linear; }
-
-        .icon-box { color: var(--arcade-bg); font-size: 24px; }
-    </style>
-</head>
-<body>
-
-<button style="position:absolute; top:20px; left:20px; z-index:1001; background:black; color:white; border:none; padding:10px 20px; border-radius:12px; cursor:pointer;" onclick="location.reload()">⬅ خروج</button>
-
-<div id="join-screen" style="display: flex; flex-direction: column; align-items: center; text-align: center; width: 380px;">
-    <h1 class="logo-text">لمحة</h1>
-    <div class="sub-logo">لعبة التحديات الجماعية</div>
-    
-    <input type="text" id="player-name" class="input-arcade" placeholder="اسم البطل">
-    <div style="display: flex; gap: 5px; width: 100%;">
-        <input type="text" id="room-id" class="input-arcade" placeholder="كود الغرفة">
-        <button class="btn-arcade" style="width: 60px; padding: 10px;" onclick="generateCode()">🎲</button>
-    </div>
-
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0; width: 100%;">
-        <input type="number" id="set-time" class="input-arcade" value="30" title="وقت السؤال">
-        <input type="number" id="set-rounds" class="input-arcade" value="10" title="عدد الجولات">
-    </div>
-
-    <button class="btn-arcade btn-start" onclick="join('أ')">
-        <span>ابدأ الآن</span>
-        <span class="icon-box">▶</span>
-    </button>
-    
-    <button class="btn-arcade" onclick="join('ب')">
-        <span>إنشاء غرفة</span>
-        <span class="icon-box">✚</span>
-    </button>
-
-    <button class="btn-arcade" onclick="alert('قريباً...')">
-        <span>الانضمام للغرفة</span>
-        <span class="icon-box">👥</span>
-    </button>
-
-    <button class="btn-arcade" onclick="alert('شرح اللعبة...')">
-        <span>كيف تلعب</span>
-        <span class="icon-box">؟</span>
-    </button>
-</div>
-
-<div id="game-screen" style="display: none; width: 100vw; justify-content: center;">
-    <div class="card">
-        <div id="timer-container"><div id="timer-bar"></div></div>
-        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 20px;">
-            <div id="leader-tag" style="display:none; color: var(--arcade-yellow); font-weight: bold;">👑 قائد</div>
-            <div onclick="copyRoomCode()" style="cursor:pointer">كود: <span id="display-room-id">---</span> 📋</div>
-            <div style="font-size: 24px;">أ: <span id="pts-أ">100</span> | ب: <span id="pts-ب">100</span></div>
-        </div>
-
-        <div id="auction-area" style="text-align: center; margin-top: 50px;">
-            <h2 id="hint-text" style="font-size: 35px; border: 4px dashed var(--arcade-yellow); padding: 30px; border-radius: 25px;">بانتظار القادة...</h2>
-            <div id="leader-controls" style="display:none; margin-top: 20px;"><button class="btn-arcade btn-start" style="width:auto; margin:0 auto;" onclick="socket.emit('requestAuction')">سؤال جديد 🤖</button></div>
-            <div id="bid-ui" style="display:none; margin-top: 20px;">
-                <p style="font-size: 30px;">المزاد الحالي: <span id="current-bid" style="color: var(--arcade-yellow);">0</span></p>
-                <button class="btn-arcade" style="width:auto; display:inline-flex; margin: 5px;" onclick="bid()">زايد +10 🔨</button>
-                <button id="win-btn" class="btn-arcade btn-start" style="display:none; width:auto;" onclick="socket.emit('winAuction', {question:currentQ})">إرساء ✅</button>
-            </div>
-        </div>
-
-        <div id="question-area" style="display: none; text-align: center; flex-direction: column;">
-            <h1 id="q-text" style="font-size: 40px; margin-top: 20px;"></h1>
-            <div id="options" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 30px;"></div>
-        </div>
-    </div>
-</div>
-
-<script src="/socket.io/socket.io.js"></script>
-<script>
-    // ... (أكواد السكربت الخاصة بك تبقى كما هي هنا) ...
-</script>
-</body>
-</html>
+// تشغيل السيرفر على البورت المحدد
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`سيرفر لعبة سؤالستان يعمل على: http://localhost:${PORT}`);
+});
 
 
 
