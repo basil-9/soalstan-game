@@ -22,14 +22,14 @@
         .input-box { background: rgba(255,255,255,0.05); border: 1px solid var(--main); color: white; padding: 10px; border-radius: 12px; text-align: center; font-size: 16px; width: 100%; margin: 5px 0; box-sizing: border-box; }
 
         /* تعديل شكل القوائم المنسدلة لتكون داكنة */
-        .select-box { background: #1e1b4b; border: 2px solid var(--main); color: white; padding: 10px; border-radius: 12px; text-align: center; font-size: 16px; width: 100%; margin: 5px 0; cursor: pointer; outline: none; }
+        .select-box { background: #1e1b4b; border: 2px solid var(--main); color: white; padding: 10px; border-radius: 12px; text-align: center; font-size: 16px; width: 100%; margin: 5px 0; cursor: pointer; outline: none; appearance: none; -webkit-appearance: none; }
         .select-box option { background-color: #0b0e14; color: white; }
 
         .how-to-play { margin-top: 25px; padding: 15px; background: rgba(255, 255, 255, 0.03); border-radius: 15px; border: 1px solid rgba(168, 85, 247, 0.3); width: 90%; text-align: right; }
         .how-to-play ul { padding-right: 20px; margin: 5px 0; }
         .how-to-play li { font-size: 13px; color: rgba(255,255,255,0.8); margin-bottom: 5px; }
 
-        #result-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 85%; padding: 25px; border-radius: 20px; display: none; text-align: center; z-index: 200; backdrop-filter: blur(15px); border: 4px solid; background: rgba(0,0,0,0.9); box-sizing: border-box; }
+        #result-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 85%; padding: 25px; border-radius: 20px; display: none; text-align: center; z-index: 200; backdrop-filter: blur(15px); border: 4px solid; background: rgba(0,0,0,0.95); box-sizing: border-box; }
         .q-image { max-width: 100%; border-radius: 15px; margin-bottom: 10px; border: 2px solid var(--main); }
     </style>
 </head>
@@ -37,7 +37,8 @@
 
 <div class="bg-stars"></div>
 <div id="timer-container"><div id="timer-bar"></div></div>
-<button style="position:absolute; top:15px; left:15px; z-index:1001; background:none; color:white; border:1px solid white; padding:5px 12px; border-radius:10px; cursor:pointer; font-size: 12px;" onclick="location.reload()">⬅ خروج</button>
+
+<button id="exit-btn" style="position:absolute; top:15px; left:15px; z-index:1001; background:none; color:white; border:1px solid white; padding:5px 12px; border-radius:10px; cursor:pointer; font-size: 12px; display:none;" onclick="exitGame()">⬅ خروج</button>
 
 <div id="join-screen" class="card">
     <h1 style="font-size: 45px; color: var(--main); text-shadow: 0 0 15px var(--main); margin: 10px 0;">سؤالستان</h1>
@@ -54,8 +55,8 @@
                 <label style="font-size:11px; color: var(--gold);">وقت الجولة</label>
                 <select id="set-time" class="select-box">
                     <option value="15">15 ثانية</option>
-                     <option value="20" selected>20 ثانية</option>
-                    <option value="30" selected>30 ثانية</option>
+                    <option value="20" selected>20 ثانية</option>
+                    <option value="30">30 ثانية</option>
                     <option value="45">45 ثانية</option>
                     <option value="60">60 ثانية</option>
                 </select>
@@ -94,7 +95,7 @@
         <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 15px; width: 100%; font-size: 13px;">
             <div id="leader-tag" style="display:none; color: var(--gold); font-weight: bold;">👑 قائد</div>
             <div onclick="copyRoomCode()"><span id="display-room-id">---</span> 📋</div>
-            <div>A: <span id="pts-A">100</span> | B: <span id="pts-B">100</span></div>
+            <div style="font-size: 15px;">A: <span id="pts-A">100</span> | B: <span id="pts-B">100</span></div>
         </div>
         
         <div id="auction-area" style="text-align: center; width: 100%; margin-top: 15px;">
@@ -146,13 +147,24 @@
         document.getElementById('display-room-id').innerText = r;
         document.getElementById('join-screen').style.display = 'none';
         document.getElementById('game-screen').style.display = 'flex';
+        document.getElementById('exit-btn').style.display = 'block'; // إظهار زر الخروج
         socket.emit('joinRoom', { ...myInfo, settings: { roundTime: parseInt(document.getElementById('set-time').value), maxRounds: parseInt(document.getElementById('set-rounds').value) } });
+    }
+
+    // وظيفة الخروج الآمنة
+    function exitGame() {
+        playSnd('click');
+        document.getElementById('game-screen').style.display = 'none';
+        document.getElementById('exit-btn').style.display = 'none';
+        document.getElementById('join-screen').style.display = 'flex';
+        // لا نستخدم reload() لمنع أخطاء السيرفر
     }
 
     socket.on('init', d => {
         isLeader = d.isLeader; roomSettings = d.settings;
         if (isLeader) { document.getElementById('leader-tag').style.display = 'block'; document.getElementById('leader-controls').style.display = 'block'; }
-        document.getElementById('pts-أ').innerText = d.pointsA; document.getElementById('pts-ب').innerText = d.pointsB;
+        document.getElementById('pts-A').innerText = d.pointsA; 
+        document.getElementById('pts-B').innerText = d.pointsB;
     });
 
     socket.on('startAuction', d => {
@@ -224,6 +236,7 @@
 </script>
 </body>
 </html>
+
 
 
 
