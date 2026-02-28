@@ -1,4 +1,4 @@
-,
+[
   { 
     "type": "image", 
     "hint": "جغرافيا: السعودية", 
@@ -25,50 +25,11 @@
   },
   { 
     "type": "image", 
-    "hint": "شعارات: تواصل", 
-    "q": "ما هو هذا التطبيق؟", 
-    "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Telegram_logo.svg/512px-Telegram_logo.svg.png", 
-    "options": ["WhatsApp", "Telegram", "Signal", "Discord"], 
-    "a": "Telegram" 
-  },
-  { 
-    "type": "image", 
     "hint": "تكنولوجيا: لوجو", 
     "q": "شعار أي لغة برمجة هذا؟", 
     "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Python-logo-notext.svg/512px-Python-logo-notext.svg.png", 
     "options": ["Java", "C++", "Python", "Swift"], 
     "a": "Python" 
-  },
-  { 
-    "type": "image", 
-    "hint": "شعارات: ترفيه", 
-    "q": "شعار أي منصة هذا؟", 
-    "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/08/Netflix_2015_logo.svg/512px-Netflix_2015_logo.svg.png", 
-    "options": ["Netflix", "Shahid", "Disney+", "YouTube"], 
-    "a": "Netflix" 
-  },
-  { 
-    "type": "image", 
-    "hint": "جغرافيا: عالمية", 
-    "q": "ما هذا المبنى الشهير في واشنطن؟", 
-    "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/WhiteHouseSouthFacade.JPG/640px-WhiteHouseSouthFacade.JPG", 
-    "options": ["البنتاغون", "البيت الأبيض", "الكابيتول", "قصر فرساي"], 
-    "a": "البيت الأبيض" 
-  },
-  { 
-    "type": "image", 
-    "hint": "شعارات: دفع", 
-    "q": "ما هي هذه الخدمة؟", 
-    "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/Apple_Pay_logo.svg/512px-Apple_Pay_logo.svg.png", 
-    "options": ["STC Pay", "Apple Pay", "Mada", "Visa"], 
-    "a": "Apple Pay" 
-  },
-  { 
-    "type": "image", 
-    "hint": "جغرافيا: معالم", 
-    "q": "ما هذا المعلم التاريخي في مدينة العلا؟", 
-    "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Madain_Saleh.jpg/640px-Madain_Saleh.jpg", 
-    "options": ["مدائن صالح", "قصر المصمك", "جبل القارة", "الدرعية"], 
-    "a": "مدائن صالح" 
   }
+]
 
