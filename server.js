@@ -26,10 +26,7 @@ io.on('connection', (socket) => {
         
         if (!roomsData[roomID]) {
             roomsData[roomID] = {
-                teams: { 
-                    'أ': { points: 100, leader: socket.id }, 
-                    'ب': { points: 100, leader: null } 
-                },
+                teams: { 'أ': { points: 100, leader: socket.id }, 'ب': { points: 100, leader: null } },
                 usedQuestions: [], isSuddenDeath: false
             };
         } else if (!roomsData[roomID].teams[team].leader) {
@@ -47,24 +44,19 @@ io.on('connection', (socket) => {
     socket.on('requestAuction', () => {
         const room = roomsData[socket.currentRoom];
         if (!room) return;
-        if (room.teams['أ'].points > 500 || room.teams['ب'].points > 500) room.isSuddenDeath = true;
-        
         const available = questionBank.filter(q => !room.usedQuestions.includes(q.q));
         const q = available.length > 0 ? available[Math.floor(Math.random() * available.length)] : questionBank[0];
         room.usedQuestions.push(q.q);
-        
-        io.to(socket.currentRoom).emit('startAuction', { hint: q.hint, fullQuestion: q, isSuddenDeath: room.isSuddenDeath });
+        io.to(socket.currentRoom).emit('startAuction', { hint: q.hint, fullQuestion: q });
     });
 
     socket.on('submitAnswer', (data) => {
         const room = roomsData[socket.currentRoom];
-        const multiplier = data.isDouble ? 2 : 1;
         const isCorrect = data.answer === data.correct;
-        
-        if (isCorrect) room.teams[data.team].points += (50 * multiplier);
-        else room.teams[data.team].points -= (30 * multiplier);
+        if (isCorrect) room.teams[data.team].points += 50;
+        else room.teams[data.team].points -= 30;
 
-        io.to(socket.currentRoom).emit('roundResult', { isCorrect, team: data.team, points: room.teams[data.team].points, name: data.name });
+        io.to(socket.currentRoom).emit('roundResult', { isCorrect, team: data.team, points: room.teams[data.team].points, name: data.name, correctAns: data.correct });
     });
 
     socket.on('winAuction', (d) => io.to(socket.currentRoom).emit('revealQuestion', d));
@@ -72,7 +64,6 @@ io.on('connection', (socket) => {
 });
 
 server.listen(process.env.PORT || 3000);
-
 
 
 
