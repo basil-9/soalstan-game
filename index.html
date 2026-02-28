@@ -2,88 +2,100 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>سؤالستان - النسخة الاحترافية</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سؤالستان - نسخة الجوال الاحترافية</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
     <style>
         :root { --main: #a855f7; --gold: #facc15; --red: #ef4444; --green: #22c55e; }
         body { margin: 0; background: #0b0e14; color: white; font-family: 'Segoe UI', sans-serif; display: flex; align-items: center; justify-content: center; overflow-x: hidden; }
         .bg-stars { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; background: radial-gradient(circle, #1e1b4b 0%, #020617 100%); }
-        .card { background: rgba(15, 23, 42, 0.95); border: 3px solid var(--main); border-radius: 40px; width: 95vw; min-height: 90vh; padding: 30px; position: relative; display: flex; flex-direction: column; align-items: center; box-shadow: 0 0 50px rgba(168, 85, 247, 0.2); margin: 20px 0; }
-        #timer-container { position: absolute; top: 0; left: 0; width: 100%; height: 8px; background: rgba(255,255,255,0.1); display: none; z-index: 1000; }
+        
+        /* تحسين استجابة البطاقة للجوال */
+        .card { background: rgba(15, 23, 42, 0.95); border: 3px solid var(--main); border-radius: 30px; width: 92vw; max-width: 500px; min-height: 85vh; padding: 20px; position: relative; display: flex; flex-direction: column; align-items: center; box-shadow: 0 0 30px rgba(168, 85, 247, 0.2); margin: 15px 0; }
+        
+        #timer-container { position: absolute; top: 0; left: 0; width: 100%; height: 6px; background: rgba(255,255,255,0.1); display: none; z-index: 1000; }
         #timer-bar { height: 100%; width: 100%; background: var(--main); transition: 1s linear; }
-        .btn-game { background: none; border: 2px solid var(--gold); color: var(--gold); padding: 12px 25px; border-radius: 15px; font-size: 22px; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        .input-box { background: rgba(255,255,255,0.05); border: 1px solid var(--main); color: white; padding: 12px; border-radius: 15px; text-align: center; font-size: 18px; width: 100%; margin: 5px 0; }
 
-        /* رسالة الخطأ والنتيجة في المنتصف */
-        #result-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 80%; padding: 40px; border-radius: 30px; display: none; text-align: center; z-index: 200; backdrop-filter: blur(15px); border: 5px solid; background: rgba(0,0,0,0.9); }
-        .overlay-wrong { border-color: var(--red) !important; color: var(--red) !important; animation: shakeX 0.5s; }
-        .overlay-correct { border-color: var(--green) !important; color: var(--green) !important; }
+        .btn-game { background: none; border: 2px solid var(--gold); color: var(--gold); padding: 10px 20px; border-radius: 12px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.3s; width: 100%; margin-top: 10px; }
+        .input-box, .select-box { background: rgba(255,255,255,0.05); border: 1px solid var(--main); color: white; padding: 10px; border-radius: 12px; text-align: center; font-size: 16px; width: 100%; margin: 5px 0; appearance: none; -webkit-appearance: none; }
+        
+        /* تصميم قائمة الاختيار */
+        .select-box { cursor: pointer; background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: left 10px center; background-size: 20px; }
 
-        /* استعادة تصميم كيف تلعب الأول */
-        .how-to-play { margin-top: 40px; padding: 20px; background: rgba(255, 255, 255, 0.03); border-radius: 20px; border: 1px solid rgba(168, 85, 247, 0.3); width: 90%; text-align: right; }
-        .how-to-play h3 { color: var(--gold); margin-bottom: 10px; border-bottom: 1px solid var(--gold); display: inline-block; }
-        .how-to-play ul { list-style: none; padding: 0; }
-        .how-to-play li { margin-bottom: 8px; font-size: 14px; color: rgba(255,255,255,0.8); }
-        .how-to-play li::before { content: "✦ "; color: var(--main); }
+        .how-to-play { margin-top: 25px; padding: 15px; background: rgba(255, 255, 255, 0.03); border-radius: 15px; border: 1px solid rgba(168, 85, 247, 0.3); width: 90%; text-align: right; font-size: 13px; }
+        
+        #result-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 85%; padding: 25px; border-radius: 20px; display: none; text-align: center; z-index: 200; backdrop-filter: blur(15px); border: 4px solid; background: rgba(0,0,0,0.9); }
     </style>
 </head>
 <body>
 
 <div class="bg-stars"></div>
 <div id="timer-container"><div id="timer-bar"></div></div>
-<button style="position:absolute; top:20px; left:20px; z-index:1001; background:none; color:white; border:1px solid white; padding:8px 15px; border-radius:12px; cursor:pointer;" onclick="playClick(); location.reload()">⬅ خروج</button>
+<button style="position:absolute; top:15px; left:15px; z-index:1001; background:none; color:white; border:1px solid white; padding:5px 12px; border-radius:10px; cursor:pointer; font-size: 12px;" onclick="playClick(); location.reload()">⬅ خروج</button>
 
 <div id="join-screen" class="card">
-    <h1 style="font-size: 80px; color: var(--main); text-shadow: 0 0 20px var(--main); margin: 0;">سؤالستان</h1>
-    <div style="width: 380px; display: flex; flex-direction: column; align-items: center;">
+    <h1 style="font-size: 50px; color: var(--main); text-shadow: 0 0 15px var(--main); margin: 10px 0;">سؤالستان</h1>
+    
+    <div style="width: 100%; max-width: 320px; display: flex; flex-direction: column; align-items: center;">
         <input type="text" id="player-name" class="input-box" placeholder="اسم البطل">
         <div style="display: flex; gap: 5px; width: 100%;">
-            <input type="text" id="room-id" class="input-box" placeholder="كود الغرفة" style="flex: 1;">
-            <button class="btn-game" style="font-size: 14px;" onclick="playClick(); generateCode()">🎲</button>
+            <input type="text" id="room-id" class="input-box" placeholder="كود الغرفة">
+            <button class="btn-game" style="width: 50px; margin-top: 5px;" onclick="playClick(); generateCode()">🎲</button>
         </div>
+        
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; width: 100%;">
-            <div><label style="font-size:12px;">وقت السؤال</label><input type="number" id="set-time" class="input-box" value="30"></div>
-            <div><label style="font-size:12px;">عدد الجولات</label><input type="number" id="set-rounds" class="input-box" value="10"></div>
+            <div>
+                <label style="font-size:11px;">وقت الجولة (ثانية)</label>
+                <select id="set-time" class="select-box">
+                    <option value="15">15 ثانية</option><option value="20">20 ثانية</option>
+                    <option value="25">25 ثانية</option><option value="30" selected>30 ثانية</option>
+                    <option value="35">35 ثانية</option><option value="40">40 ثانية</option>
+                    <option value="45">45 ثانية</option><option value="50">50 ثانية</option>
+                    <option value="55">55 ثانية</option><option value="60">60 ثانية</option>
+                </select>
+            </div>
+            <div>
+                <label style="font-size:11px;">عدد الجولات</label>
+                <select id="set-rounds" class="select-box">
+                    <option value="5">5 جولات</option><option value="10" selected>10 جولات</option>
+                    <option value="15">15 جولة</option><option value="20">20 جولة</option>
+                </select>
+            </div>
         </div>
-        <div style="display: flex; gap: 10px; width: 100%; margin-top: 20px;">
-            <button class="btn-game" style="flex: 1;" onclick="playClick(); join('أ')">فريق أ</button>
-            <button class="btn-game" style="flex: 1; border-color:var(--red); color:var(--red);" onclick="playClick(); join('ب')">فريق ب</button>
-        </div>
+
+        <button class="btn-game" onclick="playClick(); join('أ')">دخول فريق أ</button>
+        <button class="btn-game" style="border-color:var(--red); color:var(--red);" onclick="playClick(); join('ب')">دخول فريق ب</button>
     </div>
+
     <div class="how-to-play">
-        <h3>كيف تلعب؟ 📖</h3>
-        <ul>
-            <li>أنشئ غرفة جديدة أو انضم بكود الغرفة المكتوب.</li>
-            <li>تبدأ الجولة بمزاد؛ الفريق الذي يزايد أعلى يشتري السؤال.</li>
-            <li>إذا أجبت صح، تكسب 50 نقطة. إذا أخطأت، تخسر 30 نقطة.</li>
-            <li>عند الخطأ، تنتقل الفرصة فوراً للخصم مع حذف خيار خاطئ.</li>
-        </ul>
+        <h3 style="color: var(--gold); margin-top: 0;">كيف تلعب؟ 📖</h3>
+        <p>1. أدخل اسمك وكود الغرفة. 2. زايد على التلميح لشراء السؤال. 3. الإجابة الصح 50 نقطة. 4. عند الخطأ ينتقل السؤال للخصم.</p>
     </div>
 </div>
 
 <div id="game-screen" style="display: none; width: 100vw; justify-content: center;">
     <div class="card">
         <div id="result-overlay" class="animate__animated">
-            <h1 id="result-status" style="font-size:50px;"></h1>
-            <p id="result-detail" style="font-size:25px;"></p>
+            <h1 id="result-status" style="font-size:35px;"></h1>
+            <p id="result-detail" style="font-size:18px;"></p>
         </div>
-        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.5); padding: 15px; border-radius: 20px; width: 100%;">
+        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.5); padding: 10px 15px; border-radius: 15px; width: 100%; font-size: 14px;">
             <div id="leader-tag" style="display:none; color: var(--gold); font-weight: bold;">👑 قائد</div>
-            <div onclick="playClick(); copyRoomCode()">كود الغرفة: <span id="display-room-id">---</span> 📋</div>
+            <div onclick="playClick(); copyRoomCode()"><span id="display-room-id">---</span> 📋</div>
             <div>أ: <span id="pts-أ">100</span> | ب: <span id="pts-ب">100</span></div>
         </div>
-        <div id="auction-area" style="text-align: center; width: 100%; margin-top: 20px;">
-            <h2 id="hint-text" style="font-size: 40px; border: 2px dashed var(--gold); padding: 35px; border-radius: 25px;">بانتظار القادة...</h2>
-            <div id="leader-controls" style="display:none; margin-top: 20px;"><button class="btn-game" onclick="playClick(); socket.emit('requestAuction')">سؤال جديد 🤖</button></div>
-            <div id="bid-ui" style="display:none; margin-top: 20px;">
-                <p style="font-size: 25px;">المزاد: <span id="current-bid">0</span></p>
+        <div id="auction-area" style="text-align: center; width: 100%; margin-top: 15px;">
+            <h2 id="hint-text" style="font-size: 24px; border: 2px dashed var(--gold); padding: 20px; border-radius: 20px;">بانتظار القائد...</h2>
+            <div id="leader-controls" style="display:none; margin-top: 15px;"><button class="btn-game" onclick="playClick(); socket.emit('requestAuction')">سؤال جديد 🤖</button></div>
+            <div id="bid-ui" style="display:none; margin-top: 15px;">
+                <p>المزاد: <span id="current-bid">0</span></p>
                 <button class="btn-game" onclick="playClick(); bid()">زايد +10 🔨</button>
                 <button id="win-btn" class="btn-game" style="display:none; background:white; color:black;" onclick="playClick(); socket.emit('winAuction', {question:currentQ})">إرساء ✅</button>
             </div>
         </div>
         <div id="question-area" style="display: none; text-align: center; width: 100%;">
-            <div id="q-content"></div>
-            <div id="options" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;"></div>
+            <div id="q-content" style="font-size: 20px;"></div>
+            <div id="options" style="display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 15px;"></div>
         </div>
     </div>
 </div>
@@ -126,8 +138,8 @@
 
     socket.on('revealQuestion', d => {
         const content = document.getElementById('q-content'); content.innerHTML = '';
-        if (d.question.image) content.innerHTML += `<img src="${d.question.image}" style="max-width:80%; border-radius:20px; margin-bottom:15px; border:2px solid var(--main);">`;
-        content.innerHTML += `<h1 style="font-size: 40px; color: var(--main);">${d.question.q}</h1>`;
+        if (d.question.image) content.innerHTML += `<img src="${d.question.image}" style="max-width:100%; border-radius:15px; margin-bottom:10px; border:2px solid var(--main);">`;
+        content.innerHTML += `<h1 style="font-size: 26px; color: var(--main); margin: 0;">${d.question.q}</h1>`;
         renderOptions(d.question.options, d.question.a);
         document.getElementById('auction-area').style.display = 'none';
         document.getElementById('question-area').style.display = 'block';
@@ -150,34 +162,33 @@
         timerInt = setInterval(() => { timeLeft -= step; document.getElementById('timer-bar').style.width = timeLeft + '%'; if(timeLeft <= 0) clearInterval(timerInt); }, 100);
     }
 
-    /* تحويل الرسالة للمنتصف بدلاً من Alert */
     socket.on('passTurn', d => {
         sounds.wrong.play();
         const ov = document.getElementById('result-overlay');
-        ov.className = 'animate__animated overlay-wrong';
-        ov.style.display = 'block';
+        ov.className = 'animate__animated shakeX';
+        ov.style.display = 'block'; ov.style.borderColor = 'var(--red)'; ov.style.color = 'var(--red)';
         document.getElementById('result-status').innerText = "خطأ! ❌";
-        document.getElementById('result-detail').innerText = `نفس السؤال ينتقل لـ فريق ${d.toTeam} مع حذف إجابة واحدة!`;
-        
+        document.getElementById('result-detail').innerText = `انتقل لـ فريق ${d.toTeam} مع حذف إجابة!`;
         setTimeout(() => {
             ov.style.display = 'none';
             if (myInfo.team === d.toTeam) { renderOptions(d.newOptions, currentQ.a); startTimer(); }
-            else document.getElementById('options').innerHTML = '<h2>انتظر الفريق الخصم...</h2>';
-        }, 3000);
+            else document.getElementById('options').innerHTML = '<h4>دور الخصم...</h4>';
+        }, 2500);
     });
 
     socket.on('roundResult', d => {
         const ov = document.getElementById('result-overlay');
         document.getElementById('timer-container').style.display = 'none';
-        ov.className = d.isCorrect ? 'animate__animated overlay-correct' : 'animate__animated overlay-wrong';
-        ov.style.display = 'block';
-        document.getElementById('result-status').innerText = d.isCorrect ? "✅ أحسنت!" : "❌ للأسف!";
-        document.getElementById('result-detail').innerText = d.isCorrect ? d.name + " كسب 50 نقطة" : "الإجابة: " + d.correctAns;
-        setTimeout(() => { ov.style.display = 'none'; document.getElementById(`pts-${d.team}`).innerText = d.points; document.getElementById('question-area').style.display = 'none'; document.getElementById('auction-area').style.display = 'block'; }, 3000);
+        ov.className = d.isCorrect ? 'animate__animated zoomIn' : 'animate__animated shakeX';
+        ov.style.display = 'block'; ov.style.borderColor = d.isCorrect ? 'var(--green)' : 'var(--red)'; ov.style.color = d.isCorrect ? 'var(--green)' : 'var(--red)';
+        document.getElementById('result-status').innerText = d.isCorrect ? "✅ صح!" : "❌ خطأ!";
+        document.getElementById('result-detail').innerText = d.isCorrect ? d.name + " كسب 50" : "الإجابة: " + d.correctAns;
+        setTimeout(() => { ov.style.display = 'none'; document.getElementById(`pts-${d.team}`).innerText = d.points; document.getElementById('question-area').style.display = 'none'; document.getElementById('auction-area').style.display = 'block'; }, 2500);
     });
 </script>
 </body>
 </html>
+
 
 
 
