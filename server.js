@@ -19,43 +19,60 @@ io.on('connection', (socket) => {
         socket.join(roomID);
         socket.currentRoom = roomID;
         if (!roomsData[roomID]) {
-            roomsData[roomID] = { teams: { 'أ': { points: 100 }, 'ب': { points: 100 } }, usedQuestions: [], adminID: socket.id, timer: null };
+            roomsData[roomID] = { 
+                teams: { 'أ': { points: 100, combo: 0 }, 'ب': { points: 100, combo: 0 } }, 
+                adminID: socket.id, 
+                frozenTeam: null 
+            };
         }
         socket.emit('init', { pointsA: roomsData[roomID].teams['أ'].points, pointsB: roomsData[roomID].teams['ب'].points, isAdmin: socket.id === roomsData[roomID].adminID });
     });
 
     socket.on('requestAuction', (data) => {
-        const roomID = socket.currentRoom;
-        const available = questionBank.filter(q => !roomsData[roomID].usedQuestions.includes(q.q));
-        const q = available.length > 0 ? available[Math.floor(Math.random() * available.length)] : questionBank[0];
-        roomsData[roomID].usedQuestions.push(q.q);
-        io.to(roomID).emit('startAuction', { hint: q.hint, fullQuestion: q, level: data.level });
+        const room = roomsData[socket.currentRoom];
+        const q = questionBank[Math.floor(Math.random() * questionBank.length)];
+        // فرصة 20% لظهور بطاقة قوة مع السؤال
+        const powerUp = Math.random() > 0.8 ? (Math.random() > 0.5 ? 'steal' : 'freeze') : null;
+        io.to(socket.currentRoom).emit('startAuction', { hint: q.hint, fullQuestion: q, level: data.level, powerUp });
     });
 
-    socket.on('winAuction', (data) => {
-        const roomID = socket.currentRoom;
-        let timeLeft = data.level === 'easy' ? 25 : (data.level === 'hard' ? 12 : 18);
-        io.to(roomID).emit('revealQuestion', { question: data.question, duration: timeLeft });
-        clearInterval(roomsData[roomID].timer);
-        roomsData[roomID].timer = setInterval(() => {
-            timeLeft--;
-            io.to(roomID).emit('timerUpdate', timeLeft);
-            if (timeLeft <= 0) {
-                clearInterval(roomsData[roomID].timer);
-                io.to(roomID).emit('roundResult', { playerName: "انتهى الوقت", isCorrect: false, team: 'أ', points: roomsData[roomID].teams['أ'].points });
-            }
-        }, 1000);
+    socket.on('placeBid', (data) => {
+        const room = roomsData[socket.currentRoom];
+        if (room.frozenTeam === data.team) return socket.emit('notification', 'فريقك مجمد حالياً! ❄️');
+        io.to(socket.currentRoom).emit('updateBid', data);
+    });
+
+    socket.on('usePowerUp', (data) => {
+        const room = roomsData[socket.currentRoom];
+        if (data.type === 'steal') {
+            const victim = data.team === 'أ' ? 'ب' : 'أ';
+            room.teams[victim].points -= 20;
+            room.teams[data.team].points += 20;
+        } else if (data.type === 'freeze') {
+            room.frozenTeam = data.team === 'أ' ? 'ب' : 'أ';
+            setTimeout(() => { room.frozenTeam = null; }, 10000); // إذابة الثلج بعد 10 ثوانٍ
+        }
+        io.to(socket.currentRoom).emit('updateScores', { pointsA: room.teams['أ'].points, pointsB: room.teams['ب'].points });
     });
 
     socket.on('submitAnswer', (data) => {
-        const roomID = socket.currentRoom;
-        clearInterval(roomsData[roomID].timer);
+        const room = roomsData[socket.currentRoom];
         const isCorrect = data.answer === data.correct;
-        roomsData[roomID].teams[data.team].points += isCorrect ? 50 : -30;
-        io.to(roomID).emit('roundResult', { playerName: data.name, isCorrect, team: data.team, points: roomsData[roomID].teams[data.team].points });
+        const teamData = room.teams[data.team];
+        
+        if (isCorrect) {
+            teamData.combo++;
+            let gain = 50 + (teamData.combo >= 3 ? 20 : 0); // مكافأة الكومبو
+            teamData.points += gain;
+        } else {
+            teamData.combo = 0;
+            teamData.points -= 30;
+        }
+        io.to(socket.currentRoom).emit('roundResult', { isCorrect, team: data.team, points: teamData.points, combo: teamData.combo });
     });
 
-    socket.on('placeBid', (data) => io.to(socket.currentRoom).emit('updateBid', data));
+    socket.on('winAuction', (data) => io.to(socket.currentRoom).emit('revealQuestion', data));
 });
 
 server.listen(process.env.PORT || 3000);
+
