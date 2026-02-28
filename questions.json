@@ -1,9 +1,24 @@
 [
   { 
+    "type": "text", 
+    "hint": "رياضة: كأس العالم", 
+    "q": "من هو المنتخب الأكثر فوزاً بكأس العالم بـ 5 ألقاب؟", 
+    "options": ["ألمانيا", "إيطاليا", "البرازيل", "الأرجنتين"], 
+    "a": "البرازيل" 
+  },
+  { 
+    "type": "image", 
+    "hint": "جغرافيا: معالم", 
+    "q": "ما هذا المبنى التاريخي في روما؟", 
+    "img": "https://upload.wikimedia.org/wikipedia/commons/d/d8/Colosseum_in_Rome-Al_622.jpg", 
+    "options": ["الكولوسيوم", "برج بيزا", "البانثيون", "نافورة تريفي"], 
+    "a": "الكولوسيوم" 
+  },
+  { 
     "type": "image", 
     "hint": "جغرافيا: السعودية", 
     "q": "أين تقع هذه الصخرة التي تشبه الفيل؟", 
-    "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/Elephant_Rock_AlUla.jpg/640px-Elephant_Rock_AlUla.jpg", 
+    "img": "https://upload.wikimedia.org/wikipedia/commons/d/de/Elephant_Rock_AlUla.jpg", 
     "options": ["العلا", "تبوك", "حائل", "الجوف"], 
     "a": "العلا" 
   },
@@ -11,25 +26,9 @@
     "type": "image", 
     "hint": "شعارات: سيارات", 
     "q": "شعار أي شركة هذا؟", 
-    "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f4/Tesla_Logo.png/512px-Tesla_Logo.png", 
+    "img": "https://upload.wikimedia.org/wikipedia/commons/f/f4/Tesla_Logo.png", 
     "options": ["Tesla", "Lucid", "Ford", "Toyota"], 
     "a": "Tesla" 
-  },
-  { 
-    "type": "image", 
-    "hint": "جغرافيا: معالم", 
-    "q": "أين يقع هذا البرج؟", 
-    "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/af/Eiffel_Tower_from_the_Trocadero_2011.jpg/320px-Eiffel_Tower_from_the_Trocadero_2011.jpg", 
-    "options": ["لندن", "باريس", "روما", "مدريد"], 
-    "a": "باريس" 
-  },
-  { 
-    "type": "image", 
-    "hint": "تكنولوجيا: لوجو", 
-    "q": "شعار أي لغة برمجة هذا؟", 
-    "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Python-logo-notext.svg/512px-Python-logo-notext.svg.png", 
-    "options": ["Java", "C++", "Python", "Swift"], 
-    "a": "Python" 
   }
 ]
 
