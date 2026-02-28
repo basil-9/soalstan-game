@@ -1,19 +1,4 @@
-[
-  { 
-    "type": "text", 
-    "hint": "رياضة: كأس العالم", 
-    "q": "من هو المنتخب الأكثر فوزاً بكأس العالم بـ 5 ألقاب؟", 
-    "options": ["ألمانيا", "إيطاليا", "البرازيل", "الأرجنتين"], 
-    "a": "البرازيل" 
-  },
-  { 
-    "type": "image", 
-    "hint": "جغرافيا: عالمية", 
-    "q": "ما هو هذا المعلم الشهير في الهند؟", 
-    "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Taj_Mahal_%28Edited%29.jpeg/640px-Taj_Mahal_%28Edited%29.jpeg", 
-    "options": ["تاج محل", "قطب منار", "البيت الأبيض", "قلعة أغرا"], 
-    "a": "تاج محل" 
-  },
+,
   { 
     "type": "image", 
     "hint": "جغرافيا: السعودية", 
@@ -31,11 +16,59 @@
     "a": "Tesla" 
   },
   { 
-    "type": "text", 
-    "hint": "تكنولوجيا: ويب", 
-    "q": "ماذا يرمز اختصار الـ HTML؟", 
-    "options": ["HyperText Markup Language", "HighText Machine Language", "HyperTool Multi Language", "HomeTool Markup Language"], 
-    "a": "HyperText Markup Language" 
+    "type": "image", 
+    "hint": "جغرافيا: معالم", 
+    "q": "أين يقع هذا البرج؟", 
+    "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/af/Eiffel_Tower_from_the_Trocadero_2011.jpg/320px-Eiffel_Tower_from_the_Trocadero_2011.jpg", 
+    "options": ["لندن", "باريس", "روما", "مدريد"], 
+    "a": "باريس" 
+  },
+  { 
+    "type": "image", 
+    "hint": "شعارات: تواصل", 
+    "q": "ما هو هذا التطبيق؟", 
+    "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Telegram_logo.svg/512px-Telegram_logo.svg.png", 
+    "options": ["WhatsApp", "Telegram", "Signal", "Discord"], 
+    "a": "Telegram" 
+  },
+  { 
+    "type": "image", 
+    "hint": "تكنولوجيا: لوجو", 
+    "q": "شعار أي لغة برمجة هذا؟", 
+    "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Python-logo-notext.svg/512px-Python-logo-notext.svg.png", 
+    "options": ["Java", "C++", "Python", "Swift"], 
+    "a": "Python" 
+  },
+  { 
+    "type": "image", 
+    "hint": "شعارات: ترفيه", 
+    "q": "شعار أي منصة هذا؟", 
+    "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/08/Netflix_2015_logo.svg/512px-Netflix_2015_logo.svg.png", 
+    "options": ["Netflix", "Shahid", "Disney+", "YouTube"], 
+    "a": "Netflix" 
+  },
+  { 
+    "type": "image", 
+    "hint": "جغرافيا: عالمية", 
+    "q": "ما هذا المبنى الشهير في واشنطن؟", 
+    "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/WhiteHouseSouthFacade.JPG/640px-WhiteHouseSouthFacade.JPG", 
+    "options": ["البنتاغون", "البيت الأبيض", "الكابيتول", "قصر فرساي"], 
+    "a": "البيت الأبيض" 
+  },
+  { 
+    "type": "image", 
+    "hint": "شعارات: دفع", 
+    "q": "ما هي هذه الخدمة؟", 
+    "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/Apple_Pay_logo.svg/512px-Apple_Pay_logo.svg.png", 
+    "options": ["STC Pay", "Apple Pay", "Mada", "Visa"], 
+    "a": "Apple Pay" 
+  },
+  { 
+    "type": "image", 
+    "hint": "جغرافيا: معالم", 
+    "q": "ما هذا المعلم التاريخي في مدينة العلا؟", 
+    "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Madain_Saleh.jpg/640px-Madain_Saleh.jpg", 
+    "options": ["مدائن صالح", "قصر المصمك", "جبل القارة", "الدرعية"], 
+    "a": "مدائن صالح" 
   }
-]
 
