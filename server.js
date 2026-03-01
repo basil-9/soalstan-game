@@ -12,23 +12,18 @@ app.use(express.static(__dirname));
 
 let questionBank = [];
 
-// نظام الحماية المطور: بيعلمنا وين الغلط بالضبط
+// نظام الحماية: يقرأ الأسئلة بدون ما يطيح السيرفر لو فيه خطأ
 try {
     const data = fs.readFileSync(path.join(__dirname, 'questions.json'), 'utf8');
     questionBank = JSON.parse(data);
-    console.log(`✅ كفو! تم تحميل ${questionBank.length} سؤال بنجاح!`);
+    console.log(`✅ تم تحميل ${questionBank.length} سؤال بنجاح!`);
 } catch (e) {
-    console.error("🚨🚨🚨 فيه غلط بملف الأسئلة!");
-    console.error("المشكلة هي: ", e.message); 
+    console.error("❌ خطأ في ملف questions.json! تأكد من الفواصل والأقواس:", e.message);
+    // سؤال بديل مؤقت عشان ما تخرب اللعبة
     questionBank = [{
-        "type": "text", "hint": "تنبيه للقائد", "q": "فيه مشكلة بالملف (فاصلة ناقصة)، شيك على الـ Logs في Render عشان تعرف وينها.", "options": ["علم", "جاري التصحيح"], "a": "علم"
+        "type": "text", "hint": "تنبيه للقائد", "q": "يوجد خطأ (فاصلة أو قوس) في ملف questions.json، يرجى إصلاحه!", "options": ["حسناً", "جاري التعديل", "تم", "علم"], "a": "حسناً"
     }];
 }
-
-// مسار إضافي للتأكد من الأسئلة في المتصفح
-app.get('/check-questions', (req, res) => {
-    res.json({ total: questionBank.length, first: questionBank[0] });
-});
 
 let roomsData = {};
 
@@ -68,7 +63,6 @@ io.on('connection', (socket) => {
             return io.to(socket.currentRoom).emit('gameOver', { pointsA: room.teams['A'].points, pointsB: room.teams['B'].points });
         }
 
-        // اختيار سؤال عشوائي
         const q = questionBank[Math.floor(Math.random() * questionBank.length)];
         room.currentQuestion = q; 
         room.turnTaken = false;
@@ -113,6 +107,7 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log('🚀 Server running on port ' + PORT));
+
 
 
 
