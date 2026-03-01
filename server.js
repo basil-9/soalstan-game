@@ -19,7 +19,6 @@ try {
     console.log(`✅ تم تحميل ${questionBank.length} سؤال بنجاح!`);
 } catch (e) {
     console.error("❌ خطأ في ملف questions.json! تأكد من الفواصل والأقواس:", e.message);
-    // سؤال بديل مؤقت عشان ما تخرب اللعبة
     questionBank = [{
         "type": "text", "hint": "تنبيه للقائد", "q": "يوجد خطأ (فاصلة أو قوس) في ملف questions.json، يرجى إصلاحه!", "options": ["حسناً", "جاري التعديل", "تم", "علم"], "a": "حسناً"
     }];
@@ -29,32 +28,45 @@ let roomsData = {};
 
 io.on('connection', (socket) => {
     socket.on('joinRoom', (data) => {
-        const { roomID, settings, team } = data;
+        const { roomID, settings, team, teamAName, teamBName } = data;
         socket.join(roomID);
         socket.currentRoom = roomID;
 
+        // إنشاء الغرفة وتعيين أسماء الفرق
         if (!roomsData[roomID]) {
             roomsData[roomID] = {
-                teams: { 'A': { points: 100, leader: socket.id }, 'B': { points: 100, leader: null } },
+                teams: { 
+                    'A': { points: 100, leader: null, name: teamAName || "فريق A" }, 
+                    'B': { points: 100, leader: null, name: teamBName || "فريق B" } 
+                },
                 settings: settings || { roundTime: 30, maxRounds: 10 },
                 currentQuestion: null, 
                 currentRound: 0,
                 turnTaken: false,
-                firstTeam: null // لحل مشكلة خصم الوقت مرتين
+                firstTeam: null
             };
-        } else if (team && !roomsData[roomID].teams[team].leader) {
+        }
+        
+        // حل مشكلة القادة: أول شخص يدخل الفريق يصير قائده (مفصولين عن بعض)
+        if (team && !roomsData[roomID].teams[team].leader) {
             roomsData[roomID].teams[team].leader = socket.id;
         }
 
         const room = roomsData[roomID];
+        // تحديد هل هذا اللاعب هو القائد لفريقه أم لا
+        const isLeader = (socket.id === room.teams[team].leader);
+
         socket.emit('init', { 
             pointsA: room.teams['A'].points, 
             pointsB: room.teams['B'].points, 
-            isLeader: socket.id === room.teams['A'].leader || socket.id === room.teams['B'].leader, 
+            teamAName: room.teams['A'].name,
+            teamBName: room.teams['B'].name,
+            isLeader: isLeader, 
             settings: room.settings 
         });
     });
 
+    // 1. طلب جولة جديدة (تزيد الجولة)
     socket.on('requestAuction', () => {
         const room = roomsData[socket.currentRoom];
         if(!room || questionBank.length === 0) return;
@@ -71,7 +83,7 @@ io.on('connection', (socket) => {
         io.to(socket.currentRoom).emit('startAuction', { hint: q.hint, fullQuestion: q, roundNumber: room.currentRound });
     });
 
-    // 💡 التعديل الأول: تغيير السؤال في نفس الجولة بدون زيادة العداد
+    // 2. تغيير السؤال (لا تزيد الجولة)
     socket.on('changeQuestion', () => {
         const room = roomsData[socket.currentRoom];
         if(!room || questionBank.length === 0) return;
@@ -87,9 +99,10 @@ io.on('connection', (socket) => {
         const room = roomsData[socket.currentRoom];
         if(!room || !room.currentQuestion) return;
         
-        // 💡 حماية: منع الفريق من الإجابة مرتين أو سحب نقاط مضاعفة عند انتهاء الوقت
+        // منع الفريق من الإجابة مرتين
         if (room.turnTaken && data.team === room.firstTeam) return;
 
+        // 3. معالجة انتهاء الوقت (ترجع الخيارات للفريق الخصم)
         if (data.answer === "TIMEOUT") {
             room.teams[data.team].points -= 30;
             if (!room.turnTaken) {
@@ -97,11 +110,11 @@ io.on('connection', (socket) => {
                 room.firstTeam = data.team;
                 const wrong = room.currentQuestion.options.filter(o => o !== room.currentQuestion.a);
                 const newOptions = [room.currentQuestion.a, wrong[0], wrong[1]].sort(() => Math.random() - 0.5);
-                io.to(socket.currentRoom).emit('passTurn', { toTeam: data.team === 'A' ? 'B' : 'A', newOptions, points: room.teams[data.team].points });
+                io.to(socket.currentRoom).emit('passTurn', { toTeam: data.team === 'A' ? 'B' : 'A', newOptions, points: room.teams[data.team].points, isTimeout: true });
             } else {
                 const correctAns = room.currentQuestion.a;
-                room.currentQuestion = null; // قفل السؤال تماماً
-                io.to(socket.currentRoom).emit('roundResult', { isCorrect: false, team: data.team, points: room.teams[data.team].points, name: data.name, correctAns: correctAns });
+                room.currentQuestion = null;
+                io.to(socket.currentRoom).emit('roundResult', { isCorrect: false, team: data.team, points: room.teams[data.team].points, name: data.name, correctAns: correctAns, isTimeout: true });
             }
             return;
         }
@@ -110,7 +123,7 @@ io.on('connection', (socket) => {
         if (isCorrect) {
             room.teams[data.team].points += 50;
             const correctAns = room.currentQuestion.a;
-            room.currentQuestion = null; // قفل السؤال
+            room.currentQuestion = null;
             io.to(socket.currentRoom).emit('roundResult', { isCorrect: true, team: data.team, points: room.teams[data.team].points, name: data.name, correctAns: correctAns });
         } else {
             room.teams[data.team].points -= 30;
@@ -122,7 +135,7 @@ io.on('connection', (socket) => {
                 io.to(socket.currentRoom).emit('passTurn', { toTeam: data.team === 'A' ? 'B' : 'A', newOptions, points: room.teams[data.team].points });
             } else {
                 const correctAns = room.currentQuestion.a;
-                room.currentQuestion = null; // قفل السؤال
+                room.currentQuestion = null;
                 io.to(socket.currentRoom).emit('roundResult', { isCorrect: false, team: data.team, points: room.teams[data.team].points, name: data.name, correctAns: correctAns });
             }
         }
@@ -134,6 +147,7 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log('🚀 Server running on port ' + PORT));
+
 
 
 
