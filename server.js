@@ -54,6 +54,7 @@ io.on('connection', (socket) => {
         });
     });
 
+    // 1. طلب جولة جديدة (تزيد الجولة)
     socket.on('requestAuction', () => {
         const room = roomsData[socket.currentRoom];
         if(!room || questionBank.length === 0) return;
@@ -69,17 +70,31 @@ io.on('connection', (socket) => {
         io.to(socket.currentRoom).emit('startAuction', { hint: q.hint, fullQuestion: q, roundNumber: room.currentRound });
     });
 
+    // 2. تغيير السؤال (لا تزيد الجولة)
+    socket.on('changeQuestion', () => {
+        const room = roomsData[socket.currentRoom];
+        if(!room || questionBank.length === 0) return;
+
+        const q = questionBank[Math.floor(Math.random() * questionBank.length)];
+        room.currentQuestion = q; 
+        room.turnTaken = false;
+        io.to(socket.currentRoom).emit('startAuction', { hint: q.hint, fullQuestion: q, roundNumber: room.currentRound });
+    });
+
     socket.on('submitAnswer', (data) => {
         const room = roomsData[socket.currentRoom];
         if(!room) return;
         
+        // 3. معالجة انتهاء الوقت كانتقال للفريق الآخر
         if (data.answer === "TIMEOUT") {
             room.teams[data.team].points -= 30;
             if (!room.turnTaken) {
                 room.turnTaken = true;
                 const wrong = room.currentQuestion.options.filter(o => o !== room.currentQuestion.a);
                 const newOptions = [room.currentQuestion.a, wrong[0], wrong[1]].sort(() => Math.random() - 0.5);
-                io.to(socket.currentRoom).emit('passTurn', { toTeam: data.team === 'A' ? 'B' : 'A', newOptions, points: room.teams[data.team].points });
+                io.to(socket.currentRoom).emit('passTurn', { toTeam: data.team === 'A' ? 'B' : 'A', newOptions, points: room.teams[data.team].points, isTimeout: true });
+            } else {
+                io.to(socket.currentRoom).emit('roundResult', { isCorrect: false, team: data.team, points: room.teams[data.team].points, name: data.name, correctAns: room.currentQuestion.a, isTimeout: true });
             }
             return;
         }
@@ -107,6 +122,7 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log('🚀 Server running on port ' + PORT));
+
 
 
 
