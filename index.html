@@ -23,8 +23,7 @@
         }
 
         body {
-            /* إذا كان عندك صورة خلفية حطها هنا */
-            background-color: var(--primary); 
+            background-color: var(--primary);
             color: var(--text);
             margin: 0;
             padding: 20px;
@@ -38,12 +37,10 @@
             width: 100%;
             max-width: 800px;
             background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
             padding: 30px;
             border-radius: 20px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
             text-align: center;
-            border: 1px solid rgba(255,255,255,0.1);
         }
 
         h1 {
@@ -66,7 +63,6 @@
         input, select {
             background: rgba(255,255,255,0.9);
             color: var(--primary);
-            font-weight: bold;
         }
 
         button {
@@ -86,14 +82,12 @@
         .header-stats {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            background: rgba(0,0,0,0.4);
+            background: rgba(0,0,0,0.3);
             padding: 15px 20px;
             border-radius: 15px;
             margin-bottom: 20px;
             font-size: 1.2rem;
             font-weight: bold;
-            border: 1px solid rgba(255,255,255,0.1);
         }
 
         .team-a { color: #3498db; }
@@ -107,7 +101,6 @@
             font-size: 1.5rem;
             font-weight: 900;
             margin: 20px 0;
-            box-shadow: 0 4px 15px rgba(241, 196, 15, 0.4);
         }
 
         .question-box {
@@ -123,14 +116,14 @@
             max-width: 100%;
             max-height: 350px;
             border-radius: 10px;
-            margin: 15px auto;
+            margin: 15px 0;
             box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-            display: none; /* تظهر برمجياً */
+            display: none; /* مخفية افتراضياً وتظهر فقط في أسئلة الصور */
         }
 
         .options-grid {
             display: grid;
-            grid-template-columns: 1fr;
+            grid-template-columns: 1fr 1px;
             gap: 15px;
             margin-top: 20px;
         }
@@ -159,23 +152,22 @@
         }
 
         .timer {
-            font-size: 3rem;
+            font-size: 2.5rem;
             font-weight: bold;
             color: var(--gold);
             margin: 15px 0;
-            text-shadow: 0 0 10px rgba(241, 196, 15, 0.5);
-        }
-
-        .leader-panel {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
         }
 
         #bid-section { display: none; }
         #question-section { display: none; }
         
         .hidden { display: none !important; }
+        
+        /* تنسيق أزرار القائد عشان تكون جنب بعض */
+        .leader-panel {
+            display: flex;
+            gap: 10px;
+        }
     </style>
 </head>
 <body>
@@ -197,7 +189,7 @@
     <div class="container" id="game-screen" class="hidden">
         <div class="header-stats">
             <div class="team-a">الفريق الأزرق: <span id="scoreA">100</span></div>
-            <div style="color: var(--gold);">الجولة: <span id="roundNum">0</span></div>
+            <div id="roundInfo">الجولة: <span id="roundNum">0</span></div>
             <div class="team-b">الفريق البرتقالي: <span id="scoreB">100</span></div>
         </div>
 
@@ -259,10 +251,7 @@
             document.getElementById('scoreB').innerText = data.pointsB;
             isLeader = data.isLeader;
             roundSettings = data.settings;
-            if(isLeader) {
-                document.getElementById('leaderControls').classList.remove('hidden');
-                document.getElementById('leaderControls').style.display = 'flex';
-            }
+            if(isLeader) document.getElementById('leaderControls').classList.remove('hidden');
         });
 
         function startNextRound() {
@@ -275,8 +264,6 @@
 
         socket.on('startAuction', (data) => {
             document.getElementById('leaderControls').classList.add('hidden');
-            document.getElementById('leaderControls').style.display = 'none';
-            
             document.getElementById('question-section').style.display = 'none';
             document.getElementById('bid-section').style.display = 'block';
             
@@ -305,14 +292,12 @@
             document.getElementById('bid-section').style.display = 'none';
             document.getElementById('question-section').style.display = 'block';
             
-            // عرض النص
             document.getElementById('questionText').innerText = currentQ.q;
             
-            // الحل الجذري للصور: يقرأ img أو image 
+            // حل مشكلة الصور: يقرأ الكلمتين (image أو img) عشان ما يخرب عليك أي سؤال
             const imgElement = document.getElementById('questionImage');
             const imgSrc = currentQ.image || currentQ.img; 
-            
-            if (imgSrc && imgSrc.trim() !== "") {
+            if (imgSrc) {
                 imgElement.src = imgSrc;
                 imgElement.style.display = 'block';
             } else {
@@ -367,7 +352,20 @@
             socket.emit('submitAnswer', { answer: ans, team: myTeam, name: myName });
         }
 
-        // معالجة انتهاء الوقت أو الخطأ وانتقال السؤال للفريق الآخر
+        // حل مشكلة انتهاء الوقت: ترجع الخيارات وتنتقل للخصم مع خصم نقاط
+        socket.on('timeOutPass', (data) => {
+            clearInterval(countdown);
+            playSound('wrong');
+            document.getElementById('scoreA').innerText = data.toTeam === 'B' ? data.points : document.getElementById('scoreA').innerText;
+            document.getElementById('scoreB').innerText = data.toTeam === 'A' ? data.points : document.getElementById('scoreB').innerText;
+            
+            setTimeout(() => {
+                alert(`انتهى الوقت! ⏳\nالسؤال ينتقل للفريق ${data.toTeam} مع حذف خيار`);
+                renderOptions(data.newOptions, data.toTeam === myTeam);
+                startTimer();
+            }, 500);
+        });
+
         socket.on('passTurn', (data) => {
             clearInterval(countdown);
             playSound('wrong'); 
@@ -375,18 +373,11 @@
             document.getElementById('scoreA').innerText = data.toTeam === 'B' ? data.points : document.getElementById('scoreA').innerText;
             document.getElementById('scoreB').innerText = data.toTeam === 'A' ? data.points : document.getElementById('scoreB').innerText;
             
-            let alertMsg = data.isTimeout ? "انتهى الوقت! ⏳\nالسؤال ينتقل للفريق الثاني مع حذف خيار" : "إجابة خاطئة! ❌\nالسؤال ينتقل للفريق الثاني مع حذف خيار";
-            
-            document.getElementById('timerDisplay').innerHTML = `<span style="color:var(--danger); font-size: 1.5rem;">${data.isTimeout ? 'انتهى الوقت' : 'خطأ'}</span>`;
-
-            setTimeout(() => {
-                alert(alertMsg);
-                renderOptions(data.newOptions, data.toTeam === myTeam);
-                startTimer();
-            }, 800);
+            alert(`إجابة خاطئة! السؤال ينتقل للفريق ${data.toTeam} مع حذف خيار واحد`);
+            renderOptions(data.newOptions, data.toTeam === myTeam);
+            startTimer();
         });
 
-        // النتيجة النهائية للسؤال (الصح أو الخطأ النهائي)
         socket.on('roundResult', (data) => {
             clearInterval(countdown);
             playSound(data.isCorrect ? 'correct' : 'wrong');
@@ -404,15 +395,12 @@
             document.getElementById('scoreB').innerText = data.team === 'B' ? data.points : document.getElementById('scoreB').innerText;
             
             setTimeout(() => {
-                if (data.isTimeout) {
-                    alert(`انتهى الوقت نهائياً للطرفين ❌\nالجواب الصحيح هو: ${data.correctAns}`);
+                if(data.isTimeout) {
+                    alert(`انتهى الوقت نهائياً ❌\nالإجابة الصحيحة هي: ${data.correctAns}`);
                 } else {
-                    alert(`${data.name || 'اللاعب'} جابها ${data.isCorrect ? 'صح ✅' : 'غلط ❌'}!\nالجواب: ${data.correctAns}`);
+                    alert(`${data.name} جابها ${data.isCorrect ? 'صح ✅' : 'غلط ❌'}! الإجابة هي: ${data.correctAns}`);
                 }
-                if(isLeader) {
-                    document.getElementById('leaderControls').classList.remove('hidden');
-                    document.getElementById('leaderControls').style.display = 'flex';
-                }
+                if(isLeader) document.getElementById('leaderControls').classList.remove('hidden');
             }, 2000);
         });
 
