@@ -12,21 +12,18 @@ app.use(express.static(__dirname));
 
 let questionBank = [];
 
+// نظام الحماية: يقرأ الأسئلة بدون ما يطيح السيرفر لو فيه خطأ
 try {
     const data = fs.readFileSync(path.join(__dirname, 'questions.json'), 'utf8');
     questionBank = JSON.parse(data);
     console.log(`✅ تم تحميل ${questionBank.length} سؤال بنجاح!`);
 } catch (e) {
-    console.error("🚨🚨🚨 فيه غلط بملف الأسئلة!");
-    console.error("المشكلة هي: ", e.message); 
+    console.error("❌ خطأ في ملف questions.json! تأكد من الفواصل والأقواس:", e.message);
+    // سؤال بديل مؤقت عشان ما تخرب اللعبة
     questionBank = [{
-        "type": "text", "hint": "تنبيه للقائد", "q": "فيه مشكلة بالملف (فاصلة ناقصة)، شيك على الـ Logs في Render عشان تعرف وينها.", "options": ["علم", "جاري التصحيح", "تمام", "حسناً"], "a": "علم"
+        "type": "text", "hint": "تنبيه للقائد", "q": "يوجد خطأ (فاصلة أو قوس) في ملف questions.json، يرجى إصلاحه!", "options": ["حسناً", "جاري التعديل", "تم", "علم"], "a": "حسناً"
     }];
 }
-
-app.get('/check-questions', (req, res) => {
-    res.json({ total: questionBank.length, first: questionBank[0] });
-});
 
 let roomsData = {};
 
@@ -57,7 +54,6 @@ io.on('connection', (socket) => {
         });
     });
 
-    // 1. طلب جولة جديدة (تزيد الجولة)
     socket.on('requestAuction', () => {
         const room = roomsData[socket.currentRoom];
         if(!room || questionBank.length === 0) return;
@@ -73,31 +69,17 @@ io.on('connection', (socket) => {
         io.to(socket.currentRoom).emit('startAuction', { hint: q.hint, fullQuestion: q, roundNumber: room.currentRound });
     });
 
-    // 2. تغيير السؤال (لا تزيد الجولة)
-    socket.on('changeQuestion', () => {
-        const room = roomsData[socket.currentRoom];
-        if(!room || questionBank.length === 0) return;
-
-        const q = questionBank[Math.floor(Math.random() * questionBank.length)];
-        room.currentQuestion = q; 
-        room.turnTaken = false;
-        io.to(socket.currentRoom).emit('startAuction', { hint: q.hint, fullQuestion: q, roundNumber: room.currentRound });
-    });
-
     socket.on('submitAnswer', (data) => {
         const room = roomsData[socket.currentRoom];
         if(!room) return;
         
-        // 3. معالجة انتهاء الوقت
         if (data.answer === "TIMEOUT") {
             room.teams[data.team].points -= 30;
             if (!room.turnTaken) {
                 room.turnTaken = true;
                 const wrong = room.currentQuestion.options.filter(o => o !== room.currentQuestion.a);
                 const newOptions = [room.currentQuestion.a, wrong[0], wrong[1]].sort(() => Math.random() - 0.5);
-                io.to(socket.currentRoom).emit('timeOutPass', { toTeam: data.team === 'A' ? 'B' : 'A', newOptions, points: room.teams[data.team].points });
-            } else {
-                io.to(socket.currentRoom).emit('roundResult', { isCorrect: false, isTimeout: true, team: data.team, points: room.teams[data.team].points, correctAns: room.currentQuestion.a });
+                io.to(socket.currentRoom).emit('passTurn', { toTeam: data.team === 'A' ? 'B' : 'A', newOptions, points: room.teams[data.team].points });
             }
             return;
         }
@@ -125,6 +107,7 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log('🚀 Server running on port ' + PORT));
+
 
 
 
