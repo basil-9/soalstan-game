@@ -3,389 +3,317 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لعبة المزاد الذكي</title>
+    <title>سؤالستان - النسخة الاحترافية الكاملة</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap');
+        :root { --main: #a855f7; --gold: #facc15; --red: #ef4444; --green: #22c55e; }
+        body { margin: 0; background: #0b0e14; color: white; font-family: 'Segoe UI', sans-serif; display: flex; align-items: center; justify-content: center; overflow-x: hidden; min-height: 100vh; }
+        .bg-stars { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; background: radial-gradient(circle, #1e1b4b 0%, #020617 100%); }
         
-        :root {
-            --primary: #2B2D42;
-            --secondary: #8D99AE;
-            --accent: #EF233C;
-            --text: #EDF2F4;
-            --success: #2ecc71;
-            --danger: #e74c3c;
-            --gold: #f1c40f;
-        }
-
-        * {
-            box-sizing: border-box;
-            font-family: 'Tajawal', sans-serif;
-        }
-
-        body {
-            background-color: var(--primary);
-            color: var(--text);
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-        }
-
-        .container {
-            width: 100%;
-            max-width: 800px;
-            background: rgba(255, 255, 255, 0.05);
-            padding: 30px;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            text-align: center;
-        }
-
-        h1 {
-            color: var(--gold);
-            font-size: 2.5rem;
-            margin-bottom: 30px;
-            text-shadow: 0 2px 5px rgba(0,0,0,0.5);
-        }
-
-        input, select, button {
-            width: 100%;
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 10px;
-            border: none;
-            font-size: 1.1rem;
-            outline: none;
-        }
-
-        input, select {
-            background: rgba(255,255,255,0.9);
-            color: var(--primary);
-        }
-
-        button {
-            background: var(--accent);
-            color: white;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.3s;
-            box-shadow: 0 4px 15px rgba(239, 35, 60, 0.4);
-        }
-
-        button:hover {
-            transform: translateY(-2px);
-            filter: brightness(1.1);
-        }
-
-        .header-stats {
-            display: flex;
-            justify-content: space-between;
-            background: rgba(0,0,0,0.3);
-            padding: 15px 20px;
-            border-radius: 15px;
-            margin-bottom: 20px;
-            font-size: 1.2rem;
-            font-weight: bold;
-        }
-
-        .team-a { color: #3498db; }
-        .team-b { color: #e67e22; }
-
-        .hint-box {
-            background: var(--gold);
-            color: var(--primary);
-            padding: 20px;
-            border-radius: 15px;
-            font-size: 1.5rem;
-            font-weight: 900;
-            margin: 20px 0;
-        }
-
-        .question-box {
-            background: rgba(255,255,255,0.1);
-            padding: 20px;
-            border-radius: 15px;
-            margin: 20px 0;
-            font-size: 1.5rem;
-            line-height: 1.6;
-        }
-
-        .question-image {
-            max-width: 100%;
-            max-height: 350px;
-            border-radius: 10px;
-            margin: 15px 0;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-            display: none; /* مخفية افتراضياً وتظهر فقط في أسئلة الصور */
-        }
-
-        .options-grid {
-            display: grid;
-            grid-template-columns: 1fr 1px;
-            gap: 15px;
-            margin-top: 20px;
-        }
-
-        @media (min-width: 600px) {
-            .options-grid { grid-template-columns: 1fr 1fr; }
-        }
-
-        .option-btn {
-            background: var(--secondary);
-            font-size: 1.2rem;
-            padding: 20px;
-            box-shadow: none;
-        }
-
-        .option-btn:hover { background: #7f8c8d; }
+        /* تصميم البطاقة متوافق مع الجوال */
+        .card { background: rgba(15, 23, 42, 0.95); border: 3px solid var(--main); border-radius: 30px; width: 92vw; max-width: 500px; min-height: 80vh; padding: 20px; position: relative; display: flex; flex-direction: column; align-items: center; box-shadow: 0 0 30px rgba(168, 85, 247, 0.2); margin: 15px 0; }
         
-        .correct-answer {
-            background-color: var(--success) !important;
-            color: white !important;
-        }
+        #timer-container { position: absolute; top: 0; left: 0; width: 100%; height: 6px; background: rgba(255,255,255,0.1); display: none; z-index: 1000; }
+        #timer-bar { height: 100%; width: 100%; background: var(--main); transition: 1s linear; }
 
-        .wrong-answer {
-            background-color: var(--danger) !important;
-            color: white !important;
-        }
-
-        .timer {
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: var(--gold);
-            margin: 15px 0;
-        }
-
-        #bid-section { display: none; }
-        #question-section { display: none; }
+        .btn-game { background: none; border: 2px solid var(--gold); color: var(--gold); padding: 10px 20px; border-radius: 12px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.3s; width: 100%; margin-top: 10px; }
+        .btn-game:hover { background: var(--gold); color: black; }
         
-        .hidden { display: none !important; }
+        .input-box { background: rgba(255,255,255,0.05); border: 1px solid var(--main); color: white; padding: 10px; border-radius: 12px; text-align: center; font-size: 16px; width: 100%; margin: 5px 0; box-sizing: border-box; }
+
+        /* تعديل شكل القوائم المنسدلة لتكون داكنة */
+        .select-box { background: #1e1b4b; border: 2px solid var(--main); color: white; padding: 10px; border-radius: 12px; text-align: center; font-size: 16px; width: 100%; margin: 5px 0; cursor: pointer; outline: none; appearance: none; -webkit-appearance: none; }
+        .select-box option { background-color: #0b0e14; color: white; }
+
+        .how-to-play { margin-top: 25px; padding: 15px; background: rgba(255, 255, 255, 0.03); border-radius: 15px; border: 1px solid rgba(168, 85, 247, 0.3); width: 90%; text-align: right; }
+        .how-to-play ul { padding-right: 20px; margin: 5px 0; }
+        .how-to-play li { font-size: 13px; color: rgba(255,255,255,0.8); margin-bottom: 5px; }
+
+        #result-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 85%; padding: 25px; border-radius: 20px; display: none; text-align: center; z-index: 200; backdrop-filter: blur(15px); border: 4px solid; background: rgba(0,0,0,0.95); box-sizing: border-box; }
+        .q-image { max-width: 100%; max-height: 250px; border-radius: 15px; margin-bottom: 10px; border: 2px solid var(--main); object-fit: contain; }
+
+        /* شريط المعلومات العلوي الجديد للعداد والساعة */
+        .top-info-bar { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 15px; width: 100%; position: relative; margin-bottom: 10px; box-sizing: border-box; }
+        #real-time-clock { position: absolute; left: 50%; transform: translateX(-50%); color: var(--gold); font-weight: bold; font-size: 14px; border: 1px solid rgba(250, 204, 21, 0.3); padding: 2px 8px; border-radius: 8px; white-space: nowrap; }
+        #win-screen { display:none; text-align:center; width: 100%; padding: 30px 10px; z-index: 300; }
     </style>
 </head>
 <body>
 
-    <audio id="sound-correct" src="https://www.myinstants.com/media/sounds/correct-sound-effect.mp3"></audio>
-    <audio id="sound-wrong" src="https://www.myinstants.com/media/sounds/wrong-buzzer.mp3"></audio>
+<div class="bg-stars"></div>
+<div id="timer-container"><div id="timer-bar"></div></div>
 
-    <div class="container" id="login-screen">
-        <h1>لعبة المزاد الذكي 🎯</h1>
-        <input type="text" id="playerName" placeholder="أدخل اسمك" required>
-        <input type="text" id="roomID" placeholder="رمز الغرفة" required>
-        <select id="teamSelect">
-            <option value="A">الفريق الأزرق (A)</option>
-            <option value="B">الفريق البرتقالي (B)</option>
-        </select>
-        <button onclick="joinGame()">دخول اللعبة</button>
-    </div>
+<button id="exit-btn" style="position:absolute; top:15px; left:15px; z-index:1001; background:none; color:white; border:1px solid white; padding:5px 12px; border-radius:10px; cursor:pointer; font-size: 12px; display:none;" onclick="exitGame()">⬅ خروج</button>
 
-    <div class="container" id="game-screen" class="hidden">
-        <div class="header-stats">
-            <div class="team-a">الفريق الأزرق: <span id="scoreA">100</span></div>
-            <div id="roundInfo">الجولة: <span id="roundNum">0</span></div>
-            <div class="team-b">الفريق البرتقالي: <span id="scoreB">100</span></div>
+<div id="join-screen" class="card">
+    <h1 style="font-size: 45px; color: var(--main); text-shadow: 0 0 15px var(--main); margin: 10px 0;">سؤالستان</h1>
+    
+    <div style="width: 100%; max-width: 320px;">
+        <input type="text" id="player-name" class="input-box" placeholder="اكتب اسمك">
+        <div style="display: flex; gap: 5px;">
+            <input type="text" id="room-id" class="input-box" placeholder="كود الغرفة">
+            <button class="btn-game" style="width: 50px; margin-top: 5px; padding: 5px;" onclick="generateCode()">🎲</button>
         </div>
-
-        <div id="leaderControls" class="hidden">
-            <button onclick="startNextRound()" style="background: var(--success);">بدء الجولة القادمة</button>
-        </div>
-
-        <div id="bid-section">
-            <div class="hint-box" id="hintText">...</div>
-            <h3 id="currentBidder">المزاد مفتوح...</h3>
-            <input type="number" id="bidAmount" placeholder="مبلغ المزايدة">
-            <button onclick="placeBid()">مزايدة</button>
-            <button onclick="passAuction()" style="background: var(--secondary);">انسحاب (Pass)</button>
-        </div>
-
-        <div id="question-section">
-            <div class="timer" id="timerDisplay">30</div>
-            <div class="question-box">
-                <div id="questionText">...</div>
-                <img id="questionImage" class="question-image" src="" alt="صورة السؤال">
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+            <div>
+                <label style="font-size:11px; color: var(--gold);">وقت الجولة</label>
+                <select id="set-time" class="select-box">
+                    <option value="15">15 ثانية</option>
+                    <option value="20" selected>20 ثانية</option>
+                    <option value="30">30 ثانية</option>
+                    <option value="45">45 ثانية</option>
+                    <option value="60">60 ثانية</option>
+                </select>
             </div>
-            <div class="options-grid" id="optionsContainer"></div>
+            <div>
+                <label style="font-size:11px; color: var(--gold);">عدد الجولات</label>
+                <select id="set-rounds" class="select-box">
+                    <option value="5">5 جولات</option>
+                    <option value="10" selected>10 جولات</option>
+                    <option value="20">20 جولة</option>
+                </select>
+            </div>
         </div>
+
+        <button class="btn-game" onclick="join('A')">team A</button>
+        <button class="btn-game" style="border-color:var(--red); color:var(--red);" onclick="join('B')">team B</button>
     </div>
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
-        const socket = io();
-        let myTeam = '';
-        let myName = '';
-        let isLeader = false;
-        let currentQ = null;
-        let countdown;
-        let roundSettings = { roundTime: 30 };
+    <div class="how-to-play">
+        <h3 style="color: var(--gold); margin: 0 0 10px 0; font-size: 16px;">كيف تلعب؟ 📖</h3>
+        <ul>
+            <li>أنشئ غرفة أو انضم بكود.</li>
+            <li>زايد على التلميح لشراء السؤال.</li>
+            <li>الصح يكسبك 50 نقطة والخطأ يخصم 30.</li>
+            <li>عند الخطأ، يحصل الخصم على فرصة بحذف إجابة.</li>
+        </ul>
+    </div>
+</div>
 
-        function playSound(type) {
-            const audio = document.getElementById(type === 'correct' ? 'sound-correct' : 'sound-wrong');
-            if (audio) {
-                audio.currentTime = 0;
-                audio.play().catch(e => console.log("الصوت مقفل من المتصفح"));
+<div id="game-screen" style="display: none; width: 100vw; justify-content: center;">
+    <div class="card">
+        <div id="result-overlay" class="animate__animated">
+            <h1 id="result-status" style="font-size:35px;"></h1>
+            <p id="result-detail" style="font-size:18px;"></p>
+        </div>
+
+        <div class="top-info-bar">
+            <div id="round-counter" style="color: var(--gold); font-weight: bold; font-size: 13px;">جولة: <span id="current-round">1</span>/<span id="total-rounds">10</span></div>
+            <div id="real-time-clock">00:00:00</div>
+            <div style="font-size: 13px;">A: <span id="pts-A">100</span> | B: <span id="pts-B">100</span></div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 10px;">
+            <div id="leader-tag" style="display:none; color: var(--gold); font-weight: bold; font-size: 12px;">👑 قائد</div>
+            <div onclick="copyRoomCode()" style="font-size: 12px; cursor: pointer;"><span id="display-room-id">---</span> 📋</div>
+        </div>
+
+        <div id="win-screen" class="animate__animated zoomIn">
+            <h1 style="font-size: 35px; color: var(--gold); text-shadow: 0 0 20px var(--gold);">🏆 مبروك لقد ربحت!</h1>
+            <h2 id="winner-text" style="color: white; margin: 20px 0;"></h2>
+            <button class="btn-game" onclick="location.reload()">لعب مرة أخرى 🔄</button>
+        </div>
+        
+        <div id="auction-area" style="text-align: center; width: 100%; margin-top: 5px;">
+            <h2 id="hint-text" style="font-size: 22px; border: 2px dashed var(--gold); padding: 20px; border-radius: 20px;">بانتظار القائد...</h2>
+            <div id="leader-controls" style="display:none; margin-top: 10px;"><button class="btn-game" onclick="socket.emit('requestAuction')">سؤال جديد 🤖</button></div>
+            <div id="bid-ui" style="display:none; margin-top: 10px;">
+                <p>المزاد: <span id="current-bid">0</span></p>
+                <button class="btn-game" onclick="bid()">زايد +10 🔨</button>
+                <button id="win-btn" class="btn-game" style="display:none; background:white; color:black;" onclick="socket.emit('winAuction', {question:currentQ, winningTeam: myInfo.team})">إرسال المزايدة ✅</button>
+            </div>
+        </div>
+
+        <div id="question-area" style="display: none; text-align: center; width: 100%;">
+            <div id="q-content"></div>
+            <div id="options" style="display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 15px; width: 100%;"></div>
+        </div>
+    </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    const sounds = { 
+        correct: new Audio('https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3'), 
+        wrong: new Audio('https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3'), 
+        bid: new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3'), 
+        click: new Audio('https://www.soundjay.com/buttons/button-16.mp3') 
+    };
+    function playSnd(s) { sounds[s].play().catch(()=>{}); }
+
+    const socket = io();
+    // تمت إضافة currentWinner لمعرفة الفريق صاحب الدور الحالي
+    let myInfo = {}, isLeader = false, currentQ = {}, timerInt, roomSettings = {}, currentWinner = "";
+
+    // دالة تحديث ساعة الوقت الفعلي
+    function updateClock() {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('ar-SA', { hour12: false });
+        const clockElement = document.getElementById('real-time-clock');
+        if(clockElement) clockElement.innerText = timeString;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    function generateCode() { 
+        playSnd('click');
+        document.getElementById('room-id').value = "GAME-" + Math.floor(1000 + Math.random() * 9000); 
+    }
+    
+    function copyRoomCode() { 
+        navigator.clipboard.writeText(myInfo.room); 
+        alert("تم نسخ الكود!"); 
+    }
+
+    function join(t) {
+        playSnd('click');
+        const n = document.getElementById('player-name').value;
+        const r = document.getElementById('room-id').value;
+        const mt = parseInt(document.getElementById('set-time').value);
+        const mr = parseInt(document.getElementById('set-rounds').value);
+        if(!n || !r) return alert("أكمل البيانات");
+        myInfo = { name: n, room: r, team: t };
+        
+        document.getElementById('display-room-id').innerText = r;
+        document.getElementById('total-rounds').innerText = mr; // تحديث إجمالي الجولات
+        
+        document.getElementById('join-screen').style.display = 'none';
+        document.getElementById('game-screen').style.display = 'flex';
+        document.getElementById('exit-btn').style.display = 'block'; 
+        socket.emit('joinRoom', { ...myInfo, settings: { roundTime: mt, maxRounds: mr } });
+    }
+
+    function exitGame() {
+        playSnd('click');
+        document.getElementById('game-screen').style.display = 'none';
+        document.getElementById('exit-btn').style.display = 'none';
+        document.getElementById('join-screen').style.display = 'flex';
+    }
+
+    socket.on('init', d => {
+        isLeader = d.isLeader; roomSettings = d.settings;
+        if (isLeader) { document.getElementById('leader-tag').style.display = 'block'; document.getElementById('leader-controls').style.display = 'block'; }
+        document.getElementById('pts-A').innerText = d.pointsA; 
+        document.getElementById('pts-B').innerText = d.pointsB;
+    });
+
+    socket.on('startAuction', d => {
+        currentQ = d.fullQuestion; 
+        document.getElementById('current-round').innerText = d.roundNumber;
+        document.getElementById('auction-area').style.display = 'block';
+        document.getElementById('question-area').style.display = 'none'; 
+        document.getElementById('win-screen').style.display = 'none'; // إخفاء شاشة الفوز
+        document.getElementById('hint-text').innerText = "تلميح: " + d.hint;
+        document.getElementById('current-bid').innerText = '0';
+        if(isLeader) { document.getElementById('bid-ui').style.display = 'block'; document.getElementById('win-btn').style.display = 'none'; }
+    });
+
+    function bid() { playSnd('click'); socket.emit('placeBid', { team: myInfo.team, amount: parseInt(document.getElementById('current-bid').innerText) + 10 }); }
+    
+    socket.on('updateBid', d => { playSnd('bid'); document.getElementById('current-bid').innerText = d.amount; if(isLeader) document.getElementById('win-btn').style.display = 'inline-block'; });
+
+    socket.on('revealQuestion', d => {
+        currentWinner = d.winningTeam; // تسجيل الفريق الذي عليه الدور الآن
+        const content = document.getElementById('q-content'); content.innerHTML = '';
+        
+        if (d.question.img) content.innerHTML += `<img src="${d.question.img}" class="q-image">`;
+        
+        content.innerHTML += `<h1 style="font-size: 24px; color: var(--main); margin: 0;">${d.question.q}</h1>`;
+        renderOptions(d.question.options);
+        document.getElementById('auction-area').style.display = 'none';
+        document.getElementById('question-area').style.display = 'block';
+        startTimer();
+    });
+
+    function renderOptions(options) {
+        const opts = document.getElementById('options'); opts.innerHTML = '';
+        options.forEach(o => {
+            const b = document.createElement('button'); b.className = 'btn-game'; b.innerText = o;
+            
+            // قفل الزر إذا لم تكن القائد، أو إذا كان الدور للفريق الخصم
+            if(!isLeader || myInfo.team !== currentWinner) {
+                b.disabled = true;
+                b.style.opacity = "0.5";
+                b.style.cursor = "not-allowed";
             }
-        }
-
-        function joinGame() {
-            myName = document.getElementById('playerName').value;
-            const roomID = document.getElementById('roomID').value;
-            myTeam = document.getElementById('teamSelect').value;
-
-            if(!myName || !roomID) return alert('يرجى إدخال الاسم ورمز الغرفة');
-
-            socket.emit('joinRoom', { roomID, team: myTeam });
-            document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('game-screen').style.display = 'block';
-        }
-
-        socket.on('init', (data) => {
-            document.getElementById('scoreA').innerText = data.pointsA;
-            document.getElementById('scoreB').innerText = data.pointsB;
-            isLeader = data.isLeader;
-            roundSettings = data.settings;
-            if(isLeader) document.getElementById('leaderControls').classList.remove('hidden');
+            
+            b.onclick = () => { playSnd('click'); socket.emit('submitAnswer', { team: myInfo.team, answer: o, name: myInfo.name }); clearInterval(timerInt); };
+            opts.appendChild(b);
         });
+    }
 
-        function startNextRound() {
-            socket.emit('requestAuction');
-        }
+    function startTimer() {
+        document.getElementById('timer-container').style.display = 'block';
+        let timeLeft = 100; let step = 100 / (roomSettings.roundTime * 10);
+        timerInt = setInterval(() => { 
+            timeLeft -= step; 
+            document.getElementById('timer-bar').style.width = timeLeft + '%'; 
+            if(timeLeft <= 0) {
+                clearInterval(timerInt); 
+                document.getElementById('options').innerHTML = '<h3 style="color:var(--red);">انتهى الوقت! ⏳</h3>';
+                // إذا انتهى الوقت وكان دور فريقي، أرسل إجابة خاطئة فوراً
+                if(isLeader && myInfo.team === currentWinner) {
+                    socket.emit('submitAnswer', { team: myInfo.team, answer: "TIMEOUT", name: myInfo.name });
+                }
+            } 
+        }, 100);
+    }
 
-        socket.on('startAuction', (data) => {
-            document.getElementById('leaderControls').classList.add('hidden');
-            document.getElementById('question-section').style.display = 'none';
-            document.getElementById('bid-section').style.display = 'block';
-            
-            document.getElementById('roundNum').innerText = data.roundNumber;
-            document.getElementById('hintText').innerText = "تلميح: " + data.hint;
-            document.getElementById('currentBidder').innerText = "المزاد مفتوح...";
-            
-            currentQ = data.fullQuestion;
-        });
-
-        function placeBid() {
-            const amount = document.getElementById('bidAmount').value;
-            socket.emit('placeBid', { team: myTeam, name: myName, amount });
-        }
-
-        function passAuction() {
-            socket.emit('winAuction', { team: myTeam === 'A' ? 'B' : 'A' });
-        }
-
-        socket.on('updateBid', (data) => {
-            document.getElementById('currentBidder').innerText = `أعلى مزايدة: ${data.amount} من ${data.name} (${data.team})`;
-        });
-
-        socket.on('revealQuestion', (winnerData) => {
-            document.getElementById('bid-section').style.display = 'none';
-            document.getElementById('question-section').style.display = 'block';
-            
-            // عرض النص
-            document.getElementById('questionText').innerText = currentQ.q;
-            
-            // عرض الصورة إذا كان نوع السؤال "image"
-            const imgElement = document.getElementById('questionImage');
-            if (currentQ.type === 'image' && currentQ.image) {
-                imgElement.src = currentQ.image;
-                imgElement.style.display = 'block';
-            } else {
-                imgElement.style.display = 'none';
-                imgElement.src = '';
+    socket.on('passTurn', d => {
+        playSnd('wrong');
+        currentWinner = d.toTeam; // نقل الدور رسمياً للفريق الخصم
+        
+        const ov = document.getElementById('result-overlay');
+        ov.className = 'animate__animated shakeX'; ov.style.display = 'block'; 
+        ov.style.borderColor = 'var(--red)'; ov.style.color = 'var(--red)';
+        document.getElementById('result-status').innerText = "خطأ! ❌";
+        document.getElementById('result-detail').innerText = `انتقلت الفرصة لفريق ${d.toTeam} مع حذف خيار!`;
+        
+        setTimeout(() => {
+            ov.style.display = 'none';
+            if (myInfo.team === d.toTeam) { 
+                renderOptions(d.newOptions); 
+                startTimer(); 
+            } else { 
+                document.getElementById('options').innerHTML = '<h4 style="color:var(--gold);">دور الفريق الخصم حالياً...</h4>'; 
+                startTimer(); 
             }
+        }, 2500);
+    });
 
-            renderOptions(currentQ.options, winnerData.team === myTeam);
-            startTimer();
-        });
+    socket.on('roundResult', d => {
+        const ov = document.getElementById('result-overlay');
+        document.getElementById('timer-container').style.display = 'none';
+        clearInterval(timerInt);
+        ov.className = d.isCorrect ? 'animate__animated zoomIn' : 'animate__animated shakeX';
+        ov.style.display = 'block'; ov.style.borderColor = d.isCorrect ? 'var(--green)' : 'var(--red)';
+        ov.style.color = d.isCorrect ? 'var(--green)' : 'var(--red)';
+        document.getElementById('result-status').innerText = d.isCorrect ? "✅ إجابة صحيحة" : "❌ إجابة خاطئة";
+        document.getElementById('result-detail').innerText = d.isCorrect ? d.name + " كسب الفريق 50 نقطة" : "الإجابة الصحيحة: " + d.correctAns;
+        setTimeout(() => { 
+            ov.style.display = 'none'; 
+            document.getElementById(`pts-${d.team}`).innerText = d.points; 
+            document.getElementById('question-area').style.display = 'none'; 
+            document.getElementById('auction-area').style.display = 'block'; 
+        }, 3000);
+    });
 
-        function renderOptions(options, isMyTurn) {
-            const container = document.getElementById('optionsContainer');
-            container.innerHTML = '';
-            options.forEach(opt => {
-                const btn = document.createElement('button');
-                btn.className = 'option-btn';
-                btn.innerText = opt;
-                if(isMyTurn) {
-                    btn.onclick = () => submitAnswer(opt, btn);
-                } else {
-                    btn.disabled = true;
-                    btn.style.opacity = '0.5';
-                }
-                container.appendChild(btn);
-            });
-        }
-
-        function startTimer() {
-            clearInterval(countdown);
-            let timeLeft = roundSettings.roundTime;
-            document.getElementById('timerDisplay').innerText = timeLeft;
-            countdown = setInterval(() => {
-                timeLeft--;
-                document.getElementById('timerDisplay').innerText = timeLeft;
-                if(timeLeft <= 0) {
-                    clearInterval(countdown);
-                    submitAnswer("TIMEOUT", null);
-                }
-            }, 1000);
-        }
-
-        function submitAnswer(ans, btnElement) {
-            clearInterval(countdown);
-            // تعطيل جميع الأزرار لمنع النقر المزدوج
-            const allBtns = document.querySelectorAll('.option-btn');
-            allBtns.forEach(b => b.disabled = true);
-
-            // تلوين الزر مؤقتاً كاختيار
-            if(btnElement && ans !== "TIMEOUT") {
-                btnElement.style.border = "3px solid white";
-            }
-
-            socket.emit('submitAnswer', { answer: ans, team: myTeam, name: myName });
-        }
-
-        socket.on('roundResult', (data) => {
-            clearInterval(countdown);
-            
-            // تشغيل الصوت حسب النتيجة
-            playSound(data.isCorrect ? 'correct' : 'wrong');
-
-            // تلوين الأزرار لإظهار الإجابة الصحيحة والخاطئة
-            const allBtns = document.querySelectorAll('.option-btn');
-            allBtns.forEach(btn => {
-                if (btn.innerText === data.correctAns) {
-                    btn.classList.add('correct-answer');
-                } else {
-                    btn.classList.add('wrong-answer');
-                }
-            });
-
-            document.getElementById('scoreA').innerText = data.team === 'A' ? data.points : document.getElementById('scoreA').innerText;
-            document.getElementById('scoreB').innerText = data.team === 'B' ? data.points : document.getElementById('scoreB').innerText;
-            
-            setTimeout(() => {
-                alert(`${data.name} جابها ${data.isCorrect ? 'صح ✅' : 'غلط ❌'}! الإجابة هي: ${data.correctAns}`);
-                if(isLeader) document.getElementById('leaderControls').classList.remove('hidden');
-            }, 2000);
-        });
-
-        socket.on('passTurn', (data) => {
-            clearInterval(countdown);
-            playSound('wrong'); // تشغيل صوت خطأ لأن الفريق الأول أخطأ
-            
-            document.getElementById('scoreA').innerText = data.toTeam === 'B' ? data.points : document.getElementById('scoreA').innerText;
-            document.getElementById('scoreB').innerText = data.toTeam === 'A' ? data.points : document.getElementById('scoreB').innerText;
-            
-            alert(`إجابة خاطئة! السؤال ينتقل للفريق ${data.toTeam} مع حذف خيار واحد`);
-            renderOptions(data.newOptions, data.toTeam === myTeam);
-            startTimer();
-        });
-
-        socket.on('gameOver', (scores) => {
-            let winner = scores.pointsA > scores.pointsB ? "الفريق الأزرق 🏆" : (scores.pointsB > scores.pointsA ? "الفريق البرتقالي 🏆" : "تعادل 🤝");
-            alert(`انتهت اللعبة!\nالنتيجة النهائية:\nالأزرق: ${scores.pointsA}\nالبرتقالي: ${scores.pointsB}\nالفائز: ${winner}`);
-        });
-    </script>
+    // إضافة استجابة شاشة الفوز
+    socket.on('gameOver', d => {
+        document.getElementById('auction-area').style.display = 'none';
+        document.getElementById('question-area').style.display = 'none';
+        document.getElementById('timer-container').style.display = 'none';
+        document.getElementById('win-screen').style.display = 'block';
+        
+        const winner = d.pointsA > d.pointsB ? "الفريق A" : (d.pointsB > d.pointsA ? "الفريق B" : "تعادل!");
+        document.getElementById('winner-text').innerText = `الفريق الفائز هو: ${winner}`;
+        playSnd('correct');
+    });
+</script>
 </body>
 </html>
+
 
 
 
