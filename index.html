@@ -78,7 +78,7 @@
     </div>
 
     <div class="how-to-play">
-        <h3 style="color: var(--gold); margin: 0 0 10px 0; font-size: 16px;">كيف تلعب؟ (تحديث جديد) 📖</h3>
+        <h3 style="color: var(--gold); margin: 0 0 10px 0; font-size: 16px;">كيف تلعب؟ (تحدي الخداع) 📖</h3>
         <ul>
             <li>يظهر السؤال، اكتب إجابة كاذبة لتخدع أصدقاءك!</li>
             <li>اختر الإجابة الصحيحة من بين إجابات أصدقائك.</li>
@@ -146,7 +146,7 @@
 
     const socket = io();
     let myInfo = {}, isLeader = false, timerInt, roomSettings = {};
-    let allPlayers = {}, myBluffText = "";
+    let allPlayers = {}, myBluffText = "", currentCorrectAnswer = "";
 
     function updateClock() {
         const now = new Date();
@@ -214,6 +214,7 @@
 
     // 1. مرحلة التضليل
     socket.on('startBluffPhase', d => {
+        currentCorrectAnswer = d.fullQuestion.a; // حفظ الإجابة الصحيحة للتحقق
         document.getElementById('lobby-area').style.display = 'none';
         document.getElementById('question-area').style.display = 'block';
         document.getElementById('current-round').innerText = d.roundNumber;
@@ -235,8 +236,15 @@
 
     function submitMyBluff() {
         playSnd('click');
-        let bluff = document.getElementById('my-bluff').value;
+        let bluff = document.getElementById('my-bluff').value.trim();
+        
         if(!bluff) return alert("اكتب أي إجابة عشان تخدعهم!");
+        
+        // 🚀 حماية: منع اللاعب من كتابة الإجابة الصحيحة
+        if(bluff === currentCorrectAnswer) {
+            return alert("لقد كتبت الإجابة الصحيحة بالفعل! اكتب إجابة أخرى لكي تخدع أصدقائك 😉");
+        }
+
         myBluffText = bluff;
         document.getElementById('bluff-area').style.display = 'none';
         document.getElementById('status-text').innerHTML = '<p style="color:var(--gold);">تم الحفظ! بانتظار البقية يكتبون خدعهم...</p>';
@@ -254,7 +262,6 @@
         d.options.forEach(o => {
             const b = document.createElement('button'); b.className = 'btn-game'; b.innerText = o;
             
-            // ما يقدر يصوت لتضليله الخاص
             if (o === myBluffText) {
                 b.disabled = true; b.style.opacity = "0.3"; b.innerText += " (إجابتك)";
             } else {
@@ -295,10 +302,9 @@
         let resHtml = "";
         let myRes = d.results[socket.id];
         
-        // تفصيل ما حدث لكل شخص
         for(let pid in d.results) {
             let p = d.results[pid];
-            let details = p.pointsGained > 0 ? `(+${p.pointsGained})` : "(0)";
+            let details = p.pointsGained > 0 ? `<span style="color:var(--green)">(+${p.pointsGained})</span>` : "(0)";
             let trickInfo = p.tricked.length > 0 ? `<br><span style="color:var(--red);font-size:12px;">خدع: ${p.tricked.join('، ')}</span>` : "";
             resHtml += `<div style="font-size:14px; margin:5px 0; background:rgba(0,0,0,0.5); padding:5px; border-radius:5px;">
                 ${p.name}: ${details} ${trickInfo}
@@ -312,19 +318,17 @@
 
         if(myRes.pointsGained > 0) playSnd('correct'); else playSnd('wrong');
 
+        // حل مشكلة التعليق: لا نرجع للوبي، فقط نمسح المحتوى ونكتب "جاري التحضير"
         setTimeout(() => { 
             ov.style.display = 'none'; 
-            document.getElementById('question-area').style.display = 'none'; 
-            document.getElementById('lobby-area').style.display = 'block'; 
-            document.getElementById('hint-text').innerText = "جاري تحضير الجولة التالية... 🚀";
-            document.getElementById('leader-controls').style.display = 'none';
-        }, 6000);
+            document.getElementById('q-content').innerHTML = '<h2 style="color:var(--gold); padding: 40px 0;">جاري تحضير الجولة التالية... 🚀</h2>';
+            document.getElementById('options').style.display = 'none';
+            document.getElementById('status-text').innerHTML = '';
+        }, 5000);
     });
 
     function startTimer(phase) {
-        // تنظيف أي عداد قديم لمنع التعليق
         if(timerInt) clearInterval(timerInt);
-        
         document.getElementById('timer-container').style.display = 'block';
         let timeLeft = 100; let step = 100 / (roomSettings.roundTime * 10);
         
@@ -336,7 +340,6 @@
                 clearInterval(timerInt); 
                 document.getElementById('status-text').innerHTML = '<h3 style="color:var(--red);">انتهى الوقت! ⏳</h3>';
                 
-                // إرسال التايم أوت من القائد فقط لمنع التكرار والسيرفر يعمم للكل
                 if (isLeader) {
                     if (phase === 'bluff') socket.emit('timeoutBluffAll');
                     else if (phase === 'vote') socket.emit('timeoutVoteAll');
