@@ -19,12 +19,13 @@ try {
 } catch (e) {
     console.error("🚨 خطأ في ملف الأسئلة: ", e.message); 
     questionBank = [{
-        "type": "text", "hint": "تنبيه", "q": "يوجد خطأ في ملف الأسئلة.", "options": ["علم", "جاري التصحيح", "حسناً", "تم"], "a": "علم"
+        "type": "text", "hint": "تنبيه", "q": "يوجد خطأ في ملف الأسئلة.", "options": ["علم", "جاري التصحيح"], "a": "علم"
     }];
 }
 
 let roomsData = {};
 
+// 1. بدء جولة جديدة (مرحلة التضليل)
 function startNewRound(rID) {
     const room = roomsData[rID];
     if(!room || questionBank.length === 0) return;
@@ -38,46 +39,71 @@ function startNewRound(rID) {
 
     const q = questionBank[Math.floor(Math.random() * questionBank.length)];
     room.currentQuestion = q; 
-    room.answers = {};
-    room.turnTaken = false;
-    room.auctionWinner = null;
-    
-    if (room.currentRound === room.auctionRound) {
-        room.mode = 'auction';
-        io.to(rID).emit('startAuction', { hint: q.hint, fullQuestion: q, roundNumber: room.currentRound, isChange: false });
-    } else {
-        room.mode = 'normal';
-        io.to(rID).emit('startNormalRound', { fullQuestion: q, roundNumber: room.currentRound, isChange: false });
-    }
+    room.bluffs = {}; // لحفظ الإجابات المضللة
+    room.votes = {};  // لحفظ التصويتات
+    room.phase = 'bluffing'; 
+
+    io.to(rID).emit('startBluffPhase', { fullQuestion: q, roundNumber: room.currentRound });
 }
 
-function evaluateNormalRound(rID, room) {
+// 2. الانتقال لمرحلة التصويت (بعد ما الكل يكتب تضليله)
+function startVotingPhase(rID, room) {
+    room.phase = 'voting';
     let correctAns = room.currentQuestion.a;
-    let results = {};
-    let allTimeout = true;
-
-    for (let pid in room.players) {
-        let ans = room.answers[pid];
-        let res = false;
-        
-        if (ans === correctAns) {
-            res = true;
-            room.players[pid].points += 50;
-            allTimeout = false;
-        } else if (ans && ans !== "TIMEOUT") {
-            room.players[pid].points -= 30;
-            allTimeout = false;
+    
+    // جمع الإجابة الصحيحة مع كل التضليلات (مع منع التكرار)
+    let allOptions = [correctAns];
+    for (let pid in room.bluffs) {
+        let b = room.bluffs[pid].trim();
+        // إذا كتب إجابة صحيحة بالصدفة ما نكررها، أو لو اثنين كتبوا نفس التضليل
+        if (b && !allOptions.includes(b)) {
+            allOptions.push(b);
         }
-        
-        results[pid] = { name: room.players[pid].name, isCorrect: res, ans: ans };
     }
 
-    io.to(rID).emit('normalRoundResult', { results: results, correctAns: correctAns, isTimeout: allTimeout });
+    // خلط الخيارات عشان ما ينعرف وين الصح
+    allOptions.sort(() => Math.random() - 0.5);
+
+    io.to(rID).emit('startVotingPhase', { options: allOptions });
+}
+
+// 3. تقييم الجولة (توزيع النقاط)
+function evaluateRound(rID, room) {
+    room.phase = 'results';
+    let correctAns = room.currentQuestion.a;
+    let results = {}; // لتسجيل من اختار ماذا ومن خدع من
+
+    // تهيئة مصفوفة النتائج لكل لاعب
+    for (let pid in room.players) {
+        results[pid] = { name: room.players[pid].name, pointsGained: 0, votedFor: room.votes[pid], tricked: [] };
+    }
+
+    // حساب النقاط
+    for (let voterId in room.votes) {
+        let vote = room.votes[voterId];
+        
+        if (vote === correctAns) {
+            // اللي يجاوب صح ياخذ نقطتين
+            room.players[voterId].points += 2;
+            results[voterId].pointsGained += 2;
+        } else if (vote !== "TIMEOUT") {
+            // دور مين صاحب هذي الإجابة المضللة عشان نعطيه نقطة
+            for (let blufferId in room.bluffs) {
+                if (blufferId !== voterId && room.bluffs[blufferId] === vote) {
+                    room.players[blufferId].points += 1;
+                    results[blufferId].pointsGained += 1;
+                    results[blufferId].tricked.push(room.players[voterId].name); // حفظ اسم الضحية
+                }
+            }
+        }
+    }
+
+    io.to(rID).emit('roundResult', { results: results, correctAns: correctAns });
     io.to(rID).emit('updateState', { players: room.players, leader: room.leader });
     room.currentQuestion = null;
 
-    // 🚀 الانتقال التلقائي الصاروخي بعد كل جولة (سواء صح أو خطأ أو تايم أوت)
-    setTimeout(() => { if (roomsData[rID] && !roomsData[rID].currentQuestion) startNewRound(rID); }, 5000);
+    // انتقال تلقائي بعد 6 ثواني (عشان يقرأون مين خدع مين وتصير ضحك)
+    setTimeout(() => { if (roomsData[rID] && !roomsData[rID].currentQuestion) startNewRound(rID); }, 6000);
 }
 
 io.on('connection', (socket) => {
@@ -98,119 +124,77 @@ io.on('connection', (socket) => {
                 settings: settings || { roundTime: 30, maxRounds: maxRnds },
                 currentQuestion: null, 
                 currentRound: 0,
-                auctionRound: Math.floor(Math.random() * maxRnds) + 1,
-                mode: 'none',
-                answers: {},
-                turnTaken: false,
-                auctionWinner: null
+                phase: 'idle',
+                bluffs: {},
+                votes: {}
             };
         }
         
         const room = roomsData[roomID];
-        if (!room.leader || !room.players[room.leader]) {
-            room.leader = socket.id;
-        }
+        if (!room.leader || !room.players[room.leader]) room.leader = socket.id;
 
-        room.players[socket.id] = { name: name || 'لاعب', points: 100 };
-
+        // النقاط تبدأ من 0 في النظام الجديد
+        room.players[socket.id] = { name: name || 'لاعب', points: 0 };
         io.to(roomID).emit('updateState', { players: room.players, leader: room.leader, settings: room.settings });
     });
 
-    socket.on('requestAuction', () => {
+    // القائد يضغط بدء اللعبة
+    socket.on('requestGameStart', () => {
         const rID = socket.currentRoom;
         if (rID && roomsData[rID] && roomsData[rID].leader === socket.id) startNewRound(rID);
     });
 
-    socket.on('changeQuestion', () => {
+    // استقبال الإجابة المضللة
+    socket.on('submitBluff', (data) => {
         const rID = socket.currentRoom;
         const room = roomsData[rID];
-        if(!room || questionBank.length === 0) return;
+        if(!room || room.phase !== 'bluffing') return;
 
-        const q = questionBank[Math.floor(Math.random() * questionBank.length)];
-        room.currentQuestion = q; 
-        room.answers = {};
-        room.turnTaken = false;
-        
-        if (room.mode === 'auction') {
-            io.to(rID).emit('startAuction', { hint: q.hint, fullQuestion: q, roundNumber: room.currentRound, isChange: true });
-        } else {
-            io.to(rID).emit('startNormalRound', { fullQuestion: q, roundNumber: room.currentRound, isChange: true });
+        room.bluffs[socket.id] = data.bluff || "تأخر في الإجابة " + Math.floor(Math.random()*100);
+        io.to(rID).emit('playerActed', { id: socket.id, action: 'bluffed' });
+
+        if (Object.keys(room.bluffs).length === Object.keys(room.players).length) {
+            startVotingPhase(rID, room);
         }
     });
 
-    socket.on('submitAnswer', (data) => {
+    // التايم أوت لمرحلة التضليل
+    socket.on('timeoutBluffAll', () => {
         const rID = socket.currentRoom;
-        if (!rID) return;
         const room = roomsData[rID];
-        if(!room || !room.currentQuestion) return;
+        if(!room || room.phase !== 'bluffing') return;
 
-        if (room.mode === 'normal') {
-            if (data.answer === "TIMEOUT_ALL") {
-                for(let pid in room.players) {
-                    if (!room.answers[pid]) room.answers[pid] = "TIMEOUT";
-                }
-                evaluateNormalRound(rID, room);
-                return;
-            }
+        for(let pid in room.players) {
+            if (!room.bluffs[pid]) room.bluffs[pid] = "إجابة عشوائية " + Math.floor(Math.random()*1000);
+        }
+        startVotingPhase(rID, room);
+    });
 
-            if (room.answers[socket.id]) return; 
-            room.answers[socket.id] = data.answer;
-            io.to(rID).emit('playerAnswered', { id: socket.id, name: room.players[socket.id].name });
+    // استقبال التصويت
+    socket.on('submitVote', (data) => {
+        const rID = socket.currentRoom;
+        const room = roomsData[rID];
+        if(!room || room.phase !== 'voting') return;
 
-            if (Object.keys(room.answers).length === Object.keys(room.players).length) {
-                evaluateNormalRound(rID, room);
-            }
+        room.votes[socket.id] = data.vote;
+        io.to(rID).emit('playerActed', { id: socket.id, action: 'voted' });
 
-        } else if (room.mode === 'auction' || room.mode === 'auction_pass') {
-            if (data.answer === "TIMEOUT") {
-                room.players[socket.id].points -= 30;
-                
-                if (!room.turnTaken && Object.keys(room.players).length > 1) {
-                    room.turnTaken = true;
-                    room.mode = 'auction_pass'; 
-                    room.answers = {}; 
-                    const wrong = room.currentQuestion.options.filter(o => o !== room.currentQuestion.a);
-                    const newOptions = [room.currentQuestion.a, wrong[0], wrong[1]].sort(() => Math.random() - 0.5);
-                    io.to(rID).emit('passTurn', { excludedId: socket.id, newOptions: newOptions, isTimeout: true });
-                } else {
-                    let correctAns = room.currentQuestion.a;
-                    room.currentQuestion = null;
-                    io.to(rID).emit('auctionRoundResult', { isCorrect: false, name: room.players[socket.id].name, correctAns: correctAns, isTimeout: true });
-                    setTimeout(() => { if (roomsData[rID] && !roomsData[rID].currentQuestion) startNewRound(rID); }, 5000);
-                }
-                io.to(rID).emit('updateState', { players: room.players, leader: room.leader });
-                return;
-            }
-
-            const isCorrect = data.answer === room.currentQuestion.a;
-            if (isCorrect) {
-                room.players[socket.id].points += 50;
-                let correctAns = room.currentQuestion.a;
-                room.currentQuestion = null;
-                io.to(rID).emit('auctionRoundResult', { isCorrect: true, name: room.players[socket.id].name, correctAns: correctAns });
-                setTimeout(() => { if (roomsData[rID] && !roomsData[rID].currentQuestion) startNewRound(rID); }, 5000);
-            } else {
-                room.players[socket.id].points -= 30;
-                if (!room.turnTaken && Object.keys(room.players).length > 1) {
-                    room.turnTaken = true;
-                    room.mode = 'auction_pass';
-                    room.answers = {};
-                    const wrong = room.currentQuestion.options.filter(o => o !== room.currentQuestion.a);
-                    const newOptions = [room.currentQuestion.a, wrong[0], wrong[1]].sort(() => Math.random() - 0.5);
-                    io.to(rID).emit('passTurn', { excludedId: socket.id, newOptions: newOptions });
-                } else {
-                    let correctAns = room.currentQuestion.a;
-                    room.currentQuestion = null;
-                    io.to(rID).emit('auctionRoundResult', { isCorrect: false, name: room.players[socket.id].name, correctAns: correctAns });
-                    setTimeout(() => { if (roomsData[rID] && !roomsData[rID].currentQuestion) startNewRound(rID); }, 5000);
-                }
-            }
-            io.to(rID).emit('updateState', { players: room.players, leader: room.leader });
+        if (Object.keys(room.votes).length === Object.keys(room.players).length) {
+            evaluateRound(rID, room);
         }
     });
 
-    socket.on('placeBid', (d) => { if(socket.currentRoom) io.to(socket.currentRoom).emit('updateBid', d); });
-    socket.on('winAuction', (d) => { if(socket.currentRoom) io.to(socket.currentRoom).emit('revealAuctionQuestion', d); });
+    // التايم أوت لمرحلة التصويت
+    socket.on('timeoutVoteAll', () => {
+        const rID = socket.currentRoom;
+        const room = roomsData[rID];
+        if(!room || room.phase !== 'voting') return;
+
+        for(let pid in room.players) {
+            if (!room.votes[pid]) room.votes[pid] = "TIMEOUT";
+        }
+        evaluateRound(rID, room);
+    });
 
     function handleLeave(sock) {
         const rID = sock.currentRoom;
@@ -233,7 +217,8 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log('🚀 Server is running!'));
+server.listen(PORT, () => console.log('🚀 Fibbage/Bluff Server is running!'));
+
 
 
 
