@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>سؤالستان V2 🚀</title>
+    <title>سؤالستان - تحدي الخداع 🚀</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
     <style>
         :root { --main: #a855f7; --gold: #facc15; --red: #ef4444; --green: #22c55e; }
@@ -58,8 +58,8 @@
                 <label style="font-size:11px; color: var(--gold);">وقت الجولة</label>
                 <select id="set-time" class="select-box">
                     <option value="15">15 ثانية</option>
-                    <option value="20" selected>20 ثانية</option>
-                    <option value="30">30 ثانية</option>
+                    <option value="20">20 ثانية</option>
+                    <option value="30" selected>30 ثانية</option>
                     <option value="45">45 ثانية</option>
                     <option value="60">60 ثانية</option>
                 </select>
@@ -78,12 +78,12 @@
     </div>
 
     <div class="how-to-play">
-        <h3 style="color: var(--gold); margin: 0 0 10px 0; font-size: 16px;">كيف تلعب؟ 📖</h3>
+        <h3 style="color: var(--gold); margin: 0 0 10px 0; font-size: 16px;">كيف تلعب؟ (تحديث جديد) 📖</h3>
         <ul>
-            <li>العب ضد أصدقائك بنظام النقاط الفردي.</li>
-            <li>9 جولات للجميع، وجولة مزاد واحدة!</li>
-            <li>الصح يكسبك 50 نقطة والخطأ يخصم 30.</li>
-            <li>الأول في دخول الغرفة يصبح القائد.</li>
+            <li>يظهر السؤال، اكتب إجابة كاذبة لتخدع أصدقاءك!</li>
+            <li>اختر الإجابة الصحيحة من بين إجابات أصدقائك.</li>
+            <li>الصح = +2 نقطة | إذا خدعت شخص = +1 نقطة.</li>
+            <li>القائد يضغط بدء اللعبة مرة وحدة بس!</li>
         </ul>
     </div>
 </div>
@@ -113,26 +113,24 @@
             <button class="btn-game" onclick="location.reload()">لعب مرة أخرى 🔄</button>
         </div>
         
-        <div id="auction-area" style="text-align: center; width: 100%; margin-top: 5px;">
+        <div id="lobby-area" style="text-align: center; width: 100%; margin-top: 5px;">
             <div id="players-list" style="margin-bottom: 15px; color: var(--gold); font-size: 14px; padding: 10px; border: 1px dashed var(--main); border-radius: 10px;">بانتظار انضمام اللاعبين...</div>
-            
-            <h2 id="hint-text" style="font-size: 22px; padding: 10px;">بانتظار القائد...</h2>
+            <h2 id="hint-text" style="font-size: 22px; padding: 10px;">بانتظار القائد لبدء اللعبة...</h2>
             
             <div id="leader-controls" style="display:none; margin-top: 10px; gap: 5px; justify-content: center;">
-                <button id="start-btn" class="btn-game" style="width: 48%; border-color: var(--green); color: var(--green);" onclick="socket.emit('requestAuction')">بدء اللعبة 🚀</button>
-                <button id="change-btn" class="btn-game" style="width: 48%; border-color: #6b7280; color: #9ca3af; display:none;" onclick="socket.emit('changeQuestion')">تغيير السؤال 🔄</button>
-            </div>
-            
-            <div id="bid-ui" style="display:none; margin-top: 10px;">
-                <p>المزاد: <span id="current-bid">0</span></p>
-                <button class="btn-game" onclick="bid()">زايد +10 🔨</button>
-                <button id="win-btn" class="btn-game" style="display:none; background:white; color:black;" onclick="submitAuctionWinner()">إرسال المزايدة ✅</button>
+                <button id="start-btn" class="btn-game" style="width: 100%; border-color: var(--green); color: var(--green);" onclick="socket.emit('requestGameStart')">بدء اللعبة 🚀</button>
             </div>
         </div>
 
         <div id="question-area" style="display: none; text-align: center; width: 100%;">
             <div id="q-content"></div>
-            <div id="options" style="display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 15px; width: 100%;"></div>
+            <div id="bluff-area" style="display: none; margin-top: 15px; width: 100%;">
+                <input type="text" id="my-bluff" class="input-box" placeholder="اكتب إجابة مضللة لخدعهم...">
+                <button class="btn-game" onclick="submitMyBluff()">أرسل الخدعة 🕵️‍♂️</button>
+            </div>
+            <div id="options" style="display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 15px; width: 100%; display: none;"></div>
+            
+            <div id="status-text" style="margin-top: 15px; color: var(--gold); font-size: 14px;"></div>
         </div>
     </div>
 </div>
@@ -142,15 +140,13 @@
     const sounds = { 
         correct: new Audio('https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3'), 
         wrong: new Audio('https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3'), 
-        bid: new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3'), 
         click: new Audio('https://www.soundjay.com/buttons/button-16.mp3') 
     };
     function playSnd(s) { sounds[s].play().catch(()=>{}); }
 
     const socket = io();
-    let myInfo = {}, isLeader = false, currentQ = {}, timerInt, roomSettings = {};
-    let currentHighestBidder = "", currentMode = "", gameStarted = false; 
-    let allPlayers = {};
+    let myInfo = {}, isLeader = false, timerInt, roomSettings = {};
+    let allPlayers = {}, myBluffText = "";
 
     function updateClock() {
         const now = new Date();
@@ -160,10 +156,8 @@
     setInterval(updateClock, 1000); updateClock();
 
     function generateCode() { 
-        playSnd('click');
-        document.getElementById('room-id').value = "GAME-" + Math.floor(1000 + Math.random() * 9000); 
+        playSnd('click'); document.getElementById('room-id').value = "GAME-" + Math.floor(1000 + Math.random() * 9000); 
     }
-    
     function copyRoomCode() { navigator.clipboard.writeText(myInfo.room); alert("تم نسخ الكود!"); }
 
     function joinGame() {
@@ -187,15 +181,7 @@
     }
 
     function exitGame() {
-        playSnd('click');
-        socket.emit('leaveRoom');
-        document.getElementById('game-screen').style.display = 'none';
-        document.getElementById('exit-btn').style.display = 'none';
-        document.getElementById('join-screen').style.display = 'flex';
-        isLeader = false; gameStarted = false;
-        document.getElementById('leader-tag').style.display = 'none'; 
-        document.getElementById('leader-controls').style.display = 'none'; 
-        document.getElementById('hint-text').innerText = "بانتظار القائد...";
+        playSnd('click'); socket.emit('leaveRoom'); location.reload();
     }
 
     socket.on('updateState', d => {
@@ -213,13 +199,11 @@
         }
         document.getElementById('players-list').innerHTML = "👥 المتواجدين: " + listText.join(' ، ');
 
-        if (!gameStarted) {
+        if (document.getElementById('lobby-area').style.display !== 'none') {
             if (isLeader) { 
                 document.getElementById('leader-tag').style.display = 'block'; 
                 document.getElementById('leader-controls').style.display = 'flex'; 
-                document.getElementById('start-btn').style.display = 'block';
-                document.getElementById('change-btn').style.display = 'none';
-                document.getElementById('hint-text').innerText = "أنت القائد! ابدأ اللعبة الآن 🚀";
+                document.getElementById('hint-text').innerText = "أنت القائد! متى ما اكتملتوا اضغط بدء 🚀";
             } else {
                 document.getElementById('leader-tag').style.display = 'none'; 
                 document.getElementById('leader-controls').style.display = 'none'; 
@@ -228,193 +212,141 @@
         }
     });
 
-    socket.on('startNormalRound', d => {
-        gameStarted = true; currentMode = 'normal';
-        currentQ = d.fullQuestion; 
-        document.getElementById('current-round').innerText = d.roundNumber;
-        document.getElementById('auction-area').style.display = 'none';
+    // 1. مرحلة التضليل
+    socket.on('startBluffPhase', d => {
+        document.getElementById('lobby-area').style.display = 'none';
         document.getElementById('question-area').style.display = 'block';
+        document.getElementById('current-round').innerText = d.roundNumber;
+        document.getElementById('status-text').innerHTML = '';
         
         const content = document.getElementById('q-content'); content.innerHTML = '';
-        const imgSrc = currentQ.image || currentQ.img || currentQ.url;
+        const imgSrc = d.fullQuestion.image || d.fullQuestion.img || d.fullQuestion.url;
         if (imgSrc) content.innerHTML += `<img src="${imgSrc}" class="q-image" onerror="this.style.display='none'">`;
         
-        content.innerHTML += `<h1 style="font-size: 24px; color: var(--main); margin: 0;">${currentQ.q}</h1>`;
-        renderOptions(currentQ.options, true); 
-        startTimer();
-    });
-
-    socket.on('startAuction', d => {
-        gameStarted = true; currentMode = 'auction';
-        currentQ = d.fullQuestion; 
-        document.getElementById('current-round').innerText = d.roundNumber;
-        document.getElementById('auction-area').style.display = 'block';
-        document.getElementById('question-area').style.display = 'none'; 
-        document.getElementById('win-screen').style.display = 'none'; 
-        document.getElementById('hint-text').innerHTML = `🌟 جولة المزاد السرية 🌟<br>تلميح: ${d.hint}`;
+        content.innerHTML += `<h1 style="font-size: 22px; color: var(--main); margin: 0;">${d.fullQuestion.q}</h1>`;
         
-        if (!d.isChange) { document.getElementById('current-bid').innerText = '0'; currentHighestBidder = ""; }
+        document.getElementById('bluff-area').style.display = 'block';
+        document.getElementById('options').style.display = 'none';
+        document.getElementById('my-bluff').value = '';
+        document.getElementById('my-bluff').disabled = false;
         
-        if(isLeader) { 
-            document.getElementById('bid-ui').style.display = 'block'; 
-            document.getElementById('leader-controls').style.display = 'flex'; 
-            document.getElementById('start-btn').style.display = 'none';
-            document.getElementById('change-btn').style.display = 'block';
-            document.getElementById('win-btn').style.display = 'none'; 
-        } else {
-            document.getElementById('bid-ui').style.display = 'none'; 
-            document.getElementById('leader-controls').style.display = 'none';
-        }
+        startTimer('bluff');
     });
 
-    function bid() { 
-        playSnd('click'); 
-        let myCurrentPoints = allPlayers[socket.id].points;
-        let currentBidAmount = parseInt(document.getElementById('current-bid').innerText);
-        if(currentBidAmount + 10 > myCurrentPoints) return alert("❌ نقاطك لا تكفي للمزايدة!");
-        socket.emit('placeBid', { roomID: myInfo.room, id: socket.id, name: allPlayers[socket.id].name, amount: currentBidAmount + 10 }); 
-    }
-    
-    socket.on('updateBid', d => { 
-        playSnd('bid'); 
-        document.getElementById('current-bid').innerText = d.amount; 
-        currentHighestBidder = d.id; 
-        if(isLeader) document.getElementById('win-btn').style.display = 'inline-block'; 
-    });
-
-    function submitAuctionWinner() {
-        if(!currentHighestBidder) return alert("يجب المزايدة أولاً!");
-        socket.emit('winAuction', {roomID: myInfo.room, question: currentQ, winningId: currentHighestBidder});
+    function submitMyBluff() {
+        playSnd('click');
+        let bluff = document.getElementById('my-bluff').value;
+        if(!bluff) return alert("اكتب أي إجابة عشان تخدعهم!");
+        myBluffText = bluff;
+        document.getElementById('bluff-area').style.display = 'none';
+        document.getElementById('status-text').innerHTML = '<p style="color:var(--gold);">تم الحفظ! بانتظار البقية يكتبون خدعهم...</p>';
+        socket.emit('submitBluff', { bluff: bluff });
     }
 
-    socket.on('revealAuctionQuestion', d => {
-        currentMode = 'auction_play';
-        const content = document.getElementById('q-content'); content.innerHTML = '';
-        const imgSrc = d.question.image || d.question.img || d.question.url;
-        if (imgSrc) content.innerHTML += `<img src="${imgSrc}" class="q-image" onerror="this.style.display='none'">`;
+    // 2. مرحلة التصويت (ظهور الخيارات)
+    socket.on('startVotingPhase', d => {
+        clearInterval(timerInt);
+        document.getElementById('bluff-area').style.display = 'none';
+        document.getElementById('options').style.display = 'grid';
+        document.getElementById('status-text').innerHTML = '<p style="color:var(--main);">اختر الإجابة الصحيحة بدون ما تطيح بفخ أصدقائك!</p>';
         
-        content.innerHTML += `<h1 style="font-size: 24px; color: var(--main); margin: 0;">${d.question.q}</h1>`;
-        renderOptions(d.question.options, socket.id === d.winningId); 
-        document.getElementById('auction-area').style.display = 'none';
-        document.getElementById('question-area').style.display = 'block';
-        startTimer(d.winningId);
-    });
-
-    function renderOptions(options, isMyTurn) {
         const opts = document.getElementById('options'); opts.innerHTML = '';
-        options.forEach(o => {
+        d.options.forEach(o => {
             const b = document.createElement('button'); b.className = 'btn-game'; b.innerText = o;
-            if(!isMyTurn) { b.disabled = true; b.style.opacity = "0.5"; b.style.cursor = "not-allowed"; }
-            b.onclick = () => { 
-                playSnd('click'); 
-                b.style.background = 'white'; b.style.color = 'black';
-                const allBtns = document.querySelectorAll('.btn-game');
-                allBtns.forEach(btn => btn.disabled = true);
-                
-                if (currentMode === 'normal') document.getElementById('q-content').innerHTML += '<p style="color:var(--gold);">تم حفظ إجابتك، بانتظار البقية...</p>';
-                else clearInterval(timerInt);
-                
-                socket.emit('submitAnswer', { roomID: myInfo.room, answer: o }); 
-            };
+            
+            // ما يقدر يصوت لتضليله الخاص
+            if (o === myBluffText) {
+                b.disabled = true; b.style.opacity = "0.3"; b.innerText += " (إجابتك)";
+            } else {
+                b.onclick = () => { 
+                    playSnd('click'); 
+                    b.style.background = 'white'; b.style.color = 'black';
+                    const allBtns = document.querySelectorAll('#options .btn-game');
+                    allBtns.forEach(btn => btn.disabled = true);
+                    document.getElementById('status-text').innerHTML = '<p style="color:var(--gold);">تم التصويت! بانتظار النتيجة...</p>';
+                    socket.emit('submitVote', { vote: o }); 
+                };
+            }
             opts.appendChild(b);
         });
-    }
+        
+        startTimer('vote');
+    });
 
-    function startTimer(auctionWinnerId = null) {
-        document.getElementById('timer-container').style.display = 'block';
-        let timeLeft = 100; let step = 100 / (roomSettings.roundTime * 10);
-        timerInt = setInterval(() => { 
-            timeLeft -= step; 
-            document.getElementById('timer-bar').style.width = timeLeft + '%'; 
-            if(timeLeft <= 0) {
-                clearInterval(timerInt); 
-                document.getElementById('options').innerHTML = '<h3 style="color:var(--red);">انتهى الوقت! ⏳</h3>';
-                if (currentMode === 'normal' && isLeader) socket.emit('submitAnswer', { roomID: myInfo.room, answer: "TIMEOUT_ALL" });
-                else if (currentMode === 'auction_play' && socket.id === auctionWinnerId) socket.emit('submitAnswer', { roomID: myInfo.room, answer: "TIMEOUT" });
-            } 
-        }, 100);
-    }
-
-    socket.on('playerAnswered', d => {
-        if (currentMode === 'normal' && d.id !== socket.id) {
-            if (!document.getElementById('q-content').innerHTML.includes(d.name)) {
-                document.getElementById('q-content').innerHTML += `<p style="color:var(--main); font-size:12px;">${d.name} قام بالإجابة ✓</p>`;
+    socket.on('playerActed', d => {
+        if(d.id !== socket.id) {
+            let actMsg = d.action === 'bluffed' ? "كتب إجابته ✍️" : "صوت 🗳️";
+            if(!document.getElementById('status-text').innerHTML.includes(d.id)) {
+                 document.getElementById('status-text').innerHTML += `<div id="${d.id}" style="font-size:12px;">${allPlayers[d.id].name} ${actMsg}</div>`;
             }
         }
     });
 
-    socket.on('passTurn', d => {
-        playSnd('wrong'); currentMode = 'normal'; 
-        const ov = document.getElementById('result-overlay');
-        ov.className = 'animate__animated shakeX'; ov.style.display = 'block'; 
-        ov.style.borderColor = 'var(--red)'; ov.style.color = 'var(--red)';
-        
-        document.getElementById('result-status').innerText = d.isTimeout ? "انتهى الوقت! ⏳" : "خطأ! ❌";
-        document.getElementById('result-detail').innerText = `تم إتاحة السؤال للبقية مع حذف خيار!`;
-        
-        setTimeout(() => {
-            ov.style.display = 'none';
-            if (socket.id !== d.excludedId) { renderOptions(d.newOptions, true); startTimer(); } 
-            else { document.getElementById('options').innerHTML = '<h4 style="color:var(--gold);">تم حرمانك من هذه المحاولة...</h4>'; startTimer(); }
-        }, 2500);
-    });
-
-    socket.on('normalRoundResult', d => {
+    // 3. عرض النتائج
+    socket.on('roundResult', d => {
         clearInterval(timerInt); document.getElementById('timer-container').style.display = 'none';
+        
         const ov = document.getElementById('result-overlay');
         ov.className = 'animate__animated zoomIn'; ov.style.display = 'block'; 
         ov.style.borderColor = 'var(--gold)'; ov.style.color = 'var(--gold)';
         
-        document.getElementById('result-status').innerText = d.isTimeout ? "انتهى الوقت ⏳" : "النتيجة";
+        document.getElementById('result-status').innerText = "نتائج الجولة";
         
-        let resHtml = ""; let iGotItRight = false;
+        let resHtml = "";
+        let myRes = d.results[socket.id];
+        
+        // تفصيل ما حدث لكل شخص
         for(let pid in d.results) {
             let p = d.results[pid];
-            let mark = p.ans === "TIMEOUT" || !p.ans ? '⏳' : (p.isCorrect ? '✅' : '❌');
-            resHtml += `<div style="font-size:14px; margin:3px 0;">${p.name}: ${mark}</div>`;
-            if (pid === socket.id && p.isCorrect) iGotItRight = true;
+            let details = p.pointsGained > 0 ? `(+${p.pointsGained})` : "(0)";
+            let trickInfo = p.tricked.length > 0 ? `<br><span style="color:var(--red);font-size:12px;">خدع: ${p.tricked.join('، ')}</span>` : "";
+            resHtml += `<div style="font-size:14px; margin:5px 0; background:rgba(0,0,0,0.5); padding:5px; border-radius:5px;">
+                ${p.name}: ${details} ${trickInfo}
+            </div>`;
         }
 
-        document.getElementById('result-detail').innerHTML = `<div style="background: rgba(0,0,0,0.4); padding:10px; border-radius:10px; margin-bottom:10px;">${resHtml}</div>الجواب الصحيح: <span style="color:var(--green)">${d.correctAns}</span>`;
-        if(iGotItRight) playSnd('correct'); else playSnd('wrong');
+        document.getElementById('result-detail').innerHTML = `
+            <div style="margin-bottom:10px;">${resHtml}</div>
+            الجواب الحقيقي: <span style="color:var(--green); font-size:22px;">${d.correctAns}</span>
+        `;
+
+        if(myRes.pointsGained > 0) playSnd('correct'); else playSnd('wrong');
 
         setTimeout(() => { 
             ov.style.display = 'none'; 
             document.getElementById('question-area').style.display = 'none'; 
-            document.getElementById('auction-area').style.display = 'block'; 
-            
-            // 🔥 هنا شلنا ظهور أزرار القائد تماماً وقت اللعب (عشان ما يطلع لك بانتظار القائد)
-            document.getElementById('hint-text').innerText = "جاري الانتقال للسؤال التالي تلقائياً 🚀...";
+            document.getElementById('lobby-area').style.display = 'block'; 
+            document.getElementById('hint-text').innerText = "جاري تحضير الجولة التالية... 🚀";
             document.getElementById('leader-controls').style.display = 'none';
-            document.getElementById('bid-ui').style.display = 'none';
-        }, 4000);
+        }, 6000);
     });
 
-    socket.on('auctionRoundResult', d => {
-        clearInterval(timerInt); document.getElementById('timer-container').style.display = 'none';
-        const ov = document.getElementById('result-overlay');
-        ov.className = d.isCorrect ? 'animate__animated zoomIn' : 'animate__animated shakeX';
-        ov.style.display = 'block'; ov.style.borderColor = d.isCorrect ? 'var(--green)' : 'var(--red)';
-        ov.style.color = d.isCorrect ? 'var(--green)' : 'var(--red)';
+    function startTimer(phase) {
+        // تنظيف أي عداد قديم لمنع التعليق
+        if(timerInt) clearInterval(timerInt);
         
-        document.getElementById('result-status').innerText = d.isTimeout ? "انتهى الوقت ⏳" : (d.isCorrect ? "✅ إجابة صحيحة" : "❌ إجابة خاطئة");
-        document.getElementById('result-detail').innerText = `${d.name} ${d.isCorrect ? 'أصاب الهدف!' : 'أخطأ الهدف!'}\nالإجابة الصحيحة: ${d.correctAns}`;
-        playSnd(d.isCorrect ? 'correct' : 'wrong');
-
-        setTimeout(() => { 
-            ov.style.display = 'none'; 
-            document.getElementById('question-area').style.display = 'none'; 
-            document.getElementById('auction-area').style.display = 'block'; 
+        document.getElementById('timer-container').style.display = 'block';
+        let timeLeft = 100; let step = 100 / (roomSettings.roundTime * 10);
+        
+        timerInt = setInterval(() => { 
+            timeLeft -= step; 
+            document.getElementById('timer-bar').style.width = timeLeft + '%'; 
             
-            // 🔥 الانتقال صار صاروخي وبدون استئذان القائد
-            document.getElementById('hint-text').innerText = "جاري الانتقال للسؤال التالي تلقائياً 🚀...";
-            document.getElementById('leader-controls').style.display = 'none';
-            document.getElementById('bid-ui').style.display = 'none';
-        }, 4000);
-    });
+            if(timeLeft <= 0) {
+                clearInterval(timerInt); 
+                document.getElementById('status-text').innerHTML = '<h3 style="color:var(--red);">انتهى الوقت! ⏳</h3>';
+                
+                // إرسال التايم أوت من القائد فقط لمنع التكرار والسيرفر يعمم للكل
+                if (isLeader) {
+                    if (phase === 'bluff') socket.emit('timeoutBluffAll');
+                    else if (phase === 'vote') socket.emit('timeoutVoteAll');
+                }
+            } 
+        }, 100);
+    }
 
     socket.on('gameOver', d => {
-        document.getElementById('auction-area').style.display = 'none';
+        document.getElementById('lobby-area').style.display = 'none';
         document.getElementById('question-area').style.display = 'none';
         document.getElementById('timer-container').style.display = 'none';
         document.getElementById('win-screen').style.display = 'block';
@@ -436,6 +368,7 @@
 </script>
 </body>
 </html>
+
 
 
 
