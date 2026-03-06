@@ -41,6 +41,23 @@
         .avatar-item.selected { border-color: var(--gold); transform: scale(1.1); box-shadow: 0 0 10px var(--gold); background: rgba(250, 204, 21, 0.2); }
         .avatar-grid::-webkit-scrollbar { width: 6px; }
         .avatar-grid::-webkit-scrollbar-thumb { background: var(--main); border-radius: 10px; }
+
+        /* 🏆 تصميم منصة التتويج (النهاية) 🏆 */
+        .podium-container { display: flex; align-items: flex-end; justify-content: center; gap: 15px; margin-top: 30px; margin-bottom: 20px; }
+        .podium-rank { display: flex; flex-direction: column; align-items: center; }
+        .podium-1 { transform: scale(1.25); z-index: 10; margin: 0 15px; position: relative; }
+        .podium-avatar { border-radius: 50%; border: 3px solid; background: rgba(0,0,0,0.5); box-shadow: 0 0 15px; object-fit: cover; }
+        .podium-1 .podium-avatar { border-color: #fbbf24; box-shadow: 0 0 25px #fbbf24; width: 85px; height: 85px; }
+        .podium-2 .podium-avatar { border-color: #cbd5e1; box-shadow: 0 0 15px #cbd5e1; width: 65px; height: 65px; }
+        .podium-3 .podium-avatar { border-color: #b45309; box-shadow: 0 0 15px #b45309; width: 60px; height: 60px; }
+        .podium-name { font-weight: bold; margin-top: 8px; font-size: 13px; text-align: center; max-width: 90px; word-wrap: break-word; }
+        .podium-score { color: var(--gold); font-size: 11px; background: rgba(0,0,0,0.6); padding: 2px 8px; border-radius: 10px; margin-top: 4px; }
+        .crown { font-size: 35px; position: absolute; top: -30px; left: 50%; transform: translateX(-50%); animation: floatCrown 1.5s infinite alternate ease-in-out; text-shadow: 0 0 10px #fbbf24; }
+        @keyframes floatCrown { from { top: -25px; } to { top: -35px; } }
+        
+        /* 🎉 احتفال الورق */
+        .confetti { position: fixed; width: 10px; height: 10px; z-index: 9999; animation: fall linear forwards; opacity: 0.8; }
+        @keyframes fall { to { transform: translateY(100vh) rotate(720deg); opacity: 0; } }
     </style>
 </head>
 <body>
@@ -124,9 +141,8 @@
         </div>
 
         <div id="win-screen" class="animate__animated zoomIn" style="display:none; text-align:center; width: 100%;">
-            <h1 style="font-size: 35px; color: var(--gold); text-shadow: 0 0 20px var(--gold);">🏆 انتهت اللعبة!</h1>
-            <div id="winner-text" style="color: white; margin: 20px 0;"></div>
-            <button class="btn-game" onclick="location.reload()">لعب مرة أخرى 🔄</button>
+            <div id="winner-text" style="color: white; margin: 10px 0;"></div>
+            <button class="btn-game animate__animated animate__pulse animate__infinite" style="background:var(--main); color:white; border:none; margin-top:20px;" onclick="location.reload()">العب من جديد 🔄</button>
         </div>
         
         <div id="lobby-area" style="text-align: center; width: 100%; margin-top: 5px;">
@@ -280,7 +296,6 @@
         
         const content = document.getElementById('q-content'); content.innerHTML = '';
         
-        // 🚀 إصلاح نوع السؤال عشان ما تطلع كلمة text
         let qType = d.fullQuestion.category || d.fullQuestion.hint || 'سؤال عام';
         if (qType === 'text' || qType === 'image') qType = 'سؤال عام';
         
@@ -304,10 +319,7 @@
         let bluff = document.getElementById('my-bluff').value.trim();
         
         if(!bluff) return alert("اكتب أي إجابة عشان تخدعهم!");
-        
-        if(bluff === currentCorrectAnswer) {
-            return alert("لقد كتبت الاجابة الصحيحة بالفعل اكتب اجابة اخرى لكي تخدع اصدقائك");
-        }
+        if(bluff === currentCorrectAnswer) return alert("لقد كتبت الاجابة الصحيحة بالفعل اكتب اجابة اخرى لكي تخدع اصدقائك");
 
         myBluffText = bluff;
         document.getElementById('bluff-area').style.display = 'none';
@@ -409,31 +421,81 @@
         }, 100);
     }
 
+    // 🎊 دالة إنشاء الورق الاحتفالي
+    function fireConfetti() {
+        const colors = ['#facc15', '#a855f7', '#ef4444', '#22c55e', '#3b82f6'];
+        for(let i=0; i<80; i++) {
+            let conf = document.createElement('div');
+            conf.className = 'confetti';
+            conf.style.left = Math.random() * 100 + 'vw';
+            conf.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+            conf.style.animationDuration = (Math.random() * 3 + 2) + 's';
+            conf.style.animationDelay = Math.random() * 2 + 's';
+            document.body.appendChild(conf);
+        }
+    }
+
+    // 🏆 شاشة الفوز التفاعلية الجديدة
     socket.on('gameOver', d => {
         document.getElementById('lobby-area').style.display = 'none';
         document.getElementById('question-area').style.display = 'none';
         document.getElementById('timer-container').style.display = 'none';
-        document.getElementById('win-screen').style.display = 'block';
         
         let pArray = Object.values(d.players).sort((a,b) => b.points - a.points);
-        let winner = pArray[0] || {name: "لا أحد", points: 0};
+        
+        let html = `<h1 style="font-size: 35px; color: var(--gold); text-shadow: 0 0 20px var(--gold);">🏆 أبطال سؤالستان 🏆</h1>`;
+        html += `<div class="podium-container">`;
+        
+        // المركز الثاني 🥈
+        if(pArray[1]) {
+            html += `<div class="podium-rank podium-2 animate__animated animate__fadeInUp" style="animation-delay: 0.5s">
+                        <img src="${pArray[1].avatar}" class="podium-avatar">
+                        <div class="podium-name" style="color: #cbd5e1;">🥈 ${pArray[1].name}</div>
+                        <div class="podium-score">${pArray[1].points} نقطة</div>
+                     </div>`;
+        }
+        
+        // المركز الأول 🥇
+        if(pArray[0]) {
+            html += `<div class="podium-rank podium-1 animate__animated animate__zoomIn">
+                        <div class="crown">👑</div>
+                        <img src="${pArray[0].avatar}" class="podium-avatar">
+                        <div class="podium-name" style="color: #fbbf24;">🥇 ${pArray[0].name}</div>
+                        <div class="podium-score">${pArray[0].points} نقطة</div>
+                     </div>`;
+        }
+        
+        // المركز الثالث 🥉
+        if(pArray[2]) {
+            html += `<div class="podium-rank podium-3 animate__animated animate__fadeInUp" style="animation-delay: 1s">
+                        <img src="${pArray[2].avatar}" class="podium-avatar">
+                        <div class="podium-name" style="color: #d97706;">🥉 ${pArray[2].name}</div>
+                        <div class="podium-score">${pArray[2].points} نقطة</div>
+                     </div>`;
+        }
+        html += `</div>`;
 
-        let finalHtml = `<div style="background: rgba(0,0,0,0.5); border: 2px solid var(--main); padding: 15px; border-radius: 15px;">`;
-        pArray.forEach((p, i) => {
-            finalHtml += `<div style="color: ${i===0 ? 'var(--gold)' : 'white'}; font-size:18px; margin-bottom: 8px; display:flex; align-items:center; gap:10px;">
-                <span>${i+1}.</span> <img src="${p.avatar}" style="width:30px; height:30px; border-radius:50%; background:rgba(0,0,0,0.3);"> ${p.name}: ${p.points} نقطة
-            </div>`;
-        });
-        finalHtml += `<hr style="border-color: var(--gold); margin: 15px 0;">
-                <div style="color: var(--green); font-size: 24px; font-weight:bold;">البطل: ${winner.name} 🏆</div>
-            </div>`;
+        // بقية اللاعبين
+        if(pArray.length > 3) {
+            html += `<div style="background: rgba(0,0,0,0.5); border: 1px solid var(--main); padding: 10px; border-radius: 15px; margin-top: 15px; max-height: 120px; overflow-y: auto;">`;
+            for(let i=3; i<pArray.length; i++) {
+                html += `<div style="color: white; font-size:13px; margin-bottom: 8px; display:flex; align-items:center; justify-content:center; gap:10px;">
+                    <span>${i+1}.</span> <img src="${pArray[i].avatar}" style="width:25px; height:25px; border-radius:50%; background:rgba(0,0,0,0.3);"> ${pArray[i].name} (${pArray[i].points} نقطة)
+                </div>`;
+            }
+            html += `</div>`;
+        }
             
-        document.getElementById('winner-text').innerHTML = finalHtml;
+        document.getElementById('winner-text').innerHTML = html;
+        document.getElementById('win-screen').style.display = 'block';
+        
         playSnd('correct');
+        fireConfetti(); // إطلاق الاحتفالات
     });
 </script>
 </body>
 </html>
+
 
 
 
