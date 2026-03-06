@@ -25,7 +25,6 @@ try {
 
 let roomsData = {};
 
-// 🚀 دالة ذكية لتنظيف الكلمات (عشان السيرفر ما يقبل إجابة مضللة مشابهة للصح)
 function normalizeArabic(text) {
     if (!text) return "";
     return text.replace(/[أإآ]/g, 'ا')
@@ -40,8 +39,22 @@ function startNewRound(rID) {
     if(!room || questionBank.length === 0) return;
 
     room.currentRound++;
+    
+    // 🚀 حساب الألقاب عند انتهاء اللعبة
     if (room.currentRound > room.settings.maxRounds) {
-        io.to(rID).emit('gameOver', { players: room.players });
+        let playersArr = Object.values(room.players);
+        let maxBluff = Math.max(...playersArr.map(p => p.bluffSuccesses));
+        let maxTricked = Math.max(...playersArr.map(p => p.trickedCount));
+        let maxCorrect = Math.max(...playersArr.map(p => p.correctCount));
+
+        let biggestBluffer = maxBluff > 0 ? playersArr.find(p => p.bluffSuccesses === maxBluff).name : null;
+        let biggestVictim = maxTricked > 0 ? playersArr.find(p => p.trickedCount === maxTricked).name : null;
+        let biggestNerd = maxCorrect > 0 ? playersArr.find(p => p.correctCount === maxCorrect).name : null;
+
+        io.to(rID).emit('gameOver', { 
+            players: room.players,
+            titles: { bluffer: biggestBluffer, victim: biggestVictim, nerd: biggestNerd }
+        });
         return; 
     }
 
@@ -51,7 +64,9 @@ function startNewRound(rID) {
     room.votes = {};  
     room.phase = 'bluffing'; 
 
-    io.to(rID).emit('startBluffPhase', { fullQuestion: q, roundNumber: room.currentRound });
+    // إرسال تنبيه الجولة الحاسمة إذا كانت الأخيرة
+    let isDecisive = (room.currentRound === room.settings.maxRounds);
+    io.to(rID).emit('startBluffPhase', { fullQuestion: q, roundNumber: room.currentRound, isDecisive: isDecisive });
 }
 
 function startVotingPhase(rID, room) {
@@ -62,7 +77,6 @@ function startVotingPhase(rID, room) {
 
     for (let pid in room.bluffs) {
         let b = room.bluffs[pid].trim();
-        // التدقيق الذكي هنا كمان
         if (b && normalizeArabic(b) !== normalizedCorrect && !allOptions.includes(b)) {
             allOptions.push(b);
         }
@@ -80,13 +94,18 @@ function startVotingPhase(rID, room) {
     allOptions.sort(() => Math.random() - 0.5);
     room.currentOptions = allOptions; 
 
-    io.to(rID).emit('startVotingPhase', { options: allOptions });
+    let isDecisive = (room.currentRound === room.settings.maxRounds);
+    io.to(rID).emit('startVotingPhase', { options: allOptions, isDecisive: isDecisive });
 }
 
 function evaluateRound(rID, room) {
     room.phase = 'results';
     let correctAns = room.currentQuestion.a;
     let results = {}; 
+    
+    // 🚀 تطبيق مضاعف النقاط للجولة الحاسمة
+    let isDecisive = (room.currentRound === room.settings.maxRounds);
+    let multiplier = isDecisive ? 2 : 1;
 
     for (let pid in room.players) {
         results[pid] = { name: room.players[pid].name, pointsGained: 0, votedFor: room.votes[pid], tricked: [] };
@@ -96,13 +115,17 @@ function evaluateRound(rID, room) {
         let vote = room.votes[voterId];
         
         if (vote === correctAns) {
-            room.players[voterId].points += 2; 
-            results[voterId].pointsGained += 2;
+            room.players[voterId].points += (2 * multiplier); 
+            room.players[voterId].correctCount += 1; // 🤓 زيادة عداد الدافور
+            results[voterId].pointsGained += (2 * multiplier);
         } else if (vote && vote !== "TIMEOUT") {
+            room.players[voterId].trickedCount += 1; // 🤡 زيادة عداد الضحية
+
             for (let blufferId in room.bluffs) {
                 if (blufferId !== voterId && room.bluffs[blufferId] === vote) {
-                    room.players[blufferId].points += 1; 
-                    results[blufferId].pointsGained += 1;
+                    room.players[blufferId].points += (1 * multiplier); 
+                    room.players[blufferId].bluffSuccesses += 1; // 🦊 زيادة عداد النصاب
+                    results[blufferId].pointsGained += (1 * multiplier);
                     results[blufferId].tricked.push(room.players[voterId].name); 
                 }
             }
@@ -148,7 +171,8 @@ io.on('connection', (socket) => {
         const room = roomsData[roomID];
         if (!room.leader || !room.players[room.leader]) room.leader = socket.id;
 
-        room.players[socket.id] = { name: name, points: 0, avatar: avatar };
+        // 🚀 إضافة عدادات الإحصائيات للاعب الجديد
+        room.players[socket.id] = { name: name, points: 0, avatar: avatar, bluffSuccesses: 0, trickedCount: 0, correctCount: 0 };
         io.to(roomID).emit('updateState', { players: room.players, leader: room.leader, settings: room.settings });
     });
 
@@ -167,8 +191,12 @@ io.on('connection', (socket) => {
             room.bluffs = {};
             room.votes = {};
             room.currentOptions = [];
+            // تصفير النقاط والإحصائيات
             for(let pid in room.players) {
                 room.players[pid].points = 0;
+                room.players[pid].bluffSuccesses = 0;
+                room.players[pid].trickedCount = 0;
+                room.players[pid].correctCount = 0;
             }
             io.to(rID).emit('gameRestarted');
             io.to(rID).emit('updateState', { players: room.players, leader: room.leader, settings: room.settings });
@@ -245,7 +273,8 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log('🚀 Server is running!'));
+server.listen(PORT, () => console.log('🚀 Server is running!'));;
+
 
 
 
