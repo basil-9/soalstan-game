@@ -40,7 +40,6 @@ function startNewRound(rID) {
 
     room.currentRound++;
     
-    // 🚀 حساب الألقاب عند انتهاء اللعبة
     if (room.currentRound > room.settings.maxRounds) {
         let playersArr = Object.values(room.players);
         let maxBluff = Math.max(...playersArr.map(p => p.bluffSuccesses));
@@ -58,13 +57,23 @@ function startNewRound(rID) {
         return; 
     }
 
-    const q = questionBank[Math.floor(Math.random() * questionBank.length)];
+    // 🚀 ذكاء فلترة الأسئلة حسب اختيار القائد
+    let availableQuestions = questionBank;
+    if (room.settings.categories && room.settings.categories.length > 0) {
+        availableQuestions = questionBank.filter(q => {
+            let c = q.category || q.hint || q.type || 'سؤال عام';
+            return room.settings.categories.includes(c);
+        });
+        // إذا التصنيف المختار فاضي، نرجع كل الأسئلة عشان ما تخرب اللعبة
+        if (availableQuestions.length === 0) availableQuestions = questionBank;
+    }
+
+    const q = availableQuestions[Math.floor(Math.random() * availableQuestions.length)];
     room.currentQuestion = q; 
     room.bluffs = {}; 
     room.votes = {};  
     room.phase = 'bluffing'; 
 
-    // إرسال تنبيه الجولة الحاسمة إذا كانت الأخيرة
     let isDecisive = (room.currentRound === room.settings.maxRounds);
     io.to(rID).emit('startBluffPhase', { fullQuestion: q, roundNumber: room.currentRound, isDecisive: isDecisive });
 }
@@ -103,7 +112,6 @@ function evaluateRound(rID, room) {
     let correctAns = room.currentQuestion.a;
     let results = {}; 
     
-    // 🚀 تطبيق مضاعف النقاط للجولة الحاسمة
     let isDecisive = (room.currentRound === room.settings.maxRounds);
     let multiplier = isDecisive ? 2 : 1;
 
@@ -116,15 +124,15 @@ function evaluateRound(rID, room) {
         
         if (vote === correctAns) {
             room.players[voterId].points += (2 * multiplier); 
-            room.players[voterId].correctCount += 1; // 🤓 زيادة عداد الدافور
+            room.players[voterId].correctCount += 1; 
             results[voterId].pointsGained += (2 * multiplier);
         } else if (vote && vote !== "TIMEOUT") {
-            room.players[voterId].trickedCount += 1; // 🤡 زيادة عداد الضحية
+            room.players[voterId].trickedCount += 1; 
 
             for (let blufferId in room.bluffs) {
                 if (blufferId !== voterId && room.bluffs[blufferId] === vote) {
                     room.players[blufferId].points += (1 * multiplier); 
-                    room.players[blufferId].bluffSuccesses += 1; // 🦊 زيادة عداد النصاب
+                    room.players[blufferId].bluffSuccesses += 1; 
                     results[blufferId].pointsGained += (1 * multiplier);
                     results[blufferId].tricked.push(room.players[voterId].name); 
                 }
@@ -163,7 +171,7 @@ io.on('connection', (socket) => {
         if (!roomsData[roomID]) {
             let maxRnds = settings ? settings.maxRounds : 10;
             roomsData[roomID] = {
-                players: {}, leader: socket.id, settings: settings || { roundTime: 30, maxRounds: maxRnds },
+                players: {}, leader: socket.id, settings: settings || { roundTime: 30, maxRounds: maxRnds, categories: [] },
                 currentQuestion: null, currentRound: 0, phase: 'idle', bluffs: {}, votes: {}, currentOptions: []
             };
         }
@@ -171,7 +179,6 @@ io.on('connection', (socket) => {
         const room = roomsData[roomID];
         if (!room.leader || !room.players[room.leader]) room.leader = socket.id;
 
-        // 🚀 إضافة عدادات الإحصائيات للاعب الجديد
         room.players[socket.id] = { name: name, points: 0, avatar: avatar, bluffSuccesses: 0, trickedCount: 0, correctCount: 0 };
         io.to(roomID).emit('updateState', { players: room.players, leader: room.leader, settings: room.settings });
     });
@@ -191,7 +198,6 @@ io.on('connection', (socket) => {
             room.bluffs = {};
             room.votes = {};
             room.currentOptions = [];
-            // تصفير النقاط والإحصائيات
             for(let pid in room.players) {
                 room.players[pid].points = 0;
                 room.players[pid].bluffSuccesses = 0;
@@ -273,8 +279,7 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log('🚀 Server is running!'));;
-
+server.listen(PORT, () => console.log('🚀 Server is running!'));
 
 
 
