@@ -32,8 +32,7 @@ function startNewRound(rID) {
     room.currentRound++;
     if (room.currentRound > room.settings.maxRounds) {
         io.to(rID).emit('gameOver', { players: room.players });
-        delete roomsData[rID];
-        return;
+        return; // 🚀 شلنا سطر مسح الغرفة عشان نقدر نعيد اللعب!
     }
 
     const q = questionBank[Math.floor(Math.random() * questionBank.length)];
@@ -102,16 +101,13 @@ function evaluateRound(rID, room) {
     io.to(rID).emit('updateState', { players: room.players, leader: room.leader });
     room.currentQuestion = null;
 
-    setTimeout(() => { if (roomsData[rID]) startNewRound(rID); }, 7000);
+    setTimeout(() => { if (roomsData[rID] && roomsData[rID].phase === 'results') startNewRound(rID); }, 7000);
 }
 
-// 🚀 دالة ذكية لاختيار إجابة بديلة حقيقية إذا اللاعب تأخر
 function getSmartFallbackBluff(question) {
     if (question.options && Array.isArray(question.options)) {
         let wrongOptions = question.options.filter(o => o !== question.a);
-        if (wrongOptions.length > 0) {
-            return wrongOptions[Math.floor(Math.random() * wrongOptions.length)];
-        }
+        if (wrongOptions.length > 0) return wrongOptions[Math.floor(Math.random() * wrongOptions.length)];
     }
     return "إجابة غير متوقعة";
 }
@@ -132,15 +128,8 @@ io.on('connection', (socket) => {
         if (!roomsData[roomID]) {
             let maxRnds = settings ? settings.maxRounds : 10;
             roomsData[roomID] = {
-                players: {}, 
-                leader: socket.id,
-                settings: settings || { roundTime: 30, maxRounds: maxRnds },
-                currentQuestion: null, 
-                currentRound: 0,
-                phase: 'idle',
-                bluffs: {},
-                votes: {},
-                currentOptions: []
+                players: {}, leader: socket.id, settings: settings || { roundTime: 30, maxRounds: maxRnds },
+                currentQuestion: null, currentRound: 0, phase: 'idle', bluffs: {}, votes: {}, currentOptions: []
             };
         }
         
@@ -156,20 +145,37 @@ io.on('connection', (socket) => {
         if (rID && roomsData[rID] && roomsData[rID].leader === socket.id) startNewRound(rID);
     });
 
+    // 🚀 الكود الجديد لإعادة اللعبة بنفس الغرفة
+    socket.on('restartGame', () => {
+        const rID = socket.currentRoom;
+        const room = roomsData[rID];
+        if(room && room.leader === socket.id) {
+            room.currentRound = 0;
+            room.currentQuestion = null;
+            room.phase = 'idle';
+            room.bluffs = {};
+            room.votes = {};
+            room.currentOptions = [];
+            // تصفير النقاط للجميع
+            for(let pid in room.players) {
+                room.players[pid].points = 0;
+            }
+            io.to(rID).emit('gameRestarted');
+            io.to(rID).emit('updateState', { players: room.players, leader: room.leader, settings: room.settings });
+        }
+    });
+
     socket.on('submitBluff', (data) => {
         const rID = socket.currentRoom;
         const room = roomsData[rID];
         if(!room || room.phase !== 'bluffing') return;
 
-        // 🚀 إذا أرسل إجابة فارغة، نعطيه إجابة ذكية
         let finalBluff = data.bluff ? data.bluff : getSmartFallbackBluff(room.currentQuestion);
         room.bluffs[socket.id] = finalBluff;
         
         io.to(rID).emit('playerActed', { id: socket.id, action: 'bluffed' });
 
-        if (Object.keys(room.bluffs).length === Object.keys(room.players).length) {
-            startVotingPhase(rID, room);
-        }
+        if (Object.keys(room.bluffs).length === Object.keys(room.players).length) startVotingPhase(rID, room);
     });
 
     socket.on('timeoutBluffAll', () => {
@@ -177,11 +183,8 @@ io.on('connection', (socket) => {
         const room = roomsData[rID];
         if(!room || room.phase !== 'bluffing') return;
 
-        // 🚀 إذا انتهى الوقت، نعبي الفراغات بإجابات ذكية من ملف الأسئلة
         for(let pid in room.players) {
-            if (!room.bluffs[pid]) {
-                room.bluffs[pid] = getSmartFallbackBluff(room.currentQuestion);
-            }
+            if (!room.bluffs[pid]) room.bluffs[pid] = getSmartFallbackBluff(room.currentQuestion);
         }
         startVotingPhase(rID, room);
     });
@@ -194,9 +197,7 @@ io.on('connection', (socket) => {
         room.votes[socket.id] = data.vote;
         io.to(rID).emit('playerActed', { id: socket.id, action: 'voted' });
 
-        if (Object.keys(room.votes).length === Object.keys(room.players).length) {
-            evaluateRound(rID, room);
-        }
+        if (Object.keys(room.votes).length === Object.keys(room.players).length) evaluateRound(rID, room);
     });
 
     socket.on('timeoutVoteAll', () => {
@@ -235,6 +236,7 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log('🚀 Server is running!'));
+
 
 
 
