@@ -383,13 +383,19 @@
         
         content.innerHTML += `<div style="background:var(--main); color:white; padding:4px 12px; border-radius:12px; display:inline-block; font-size:13px; font-weight:bold; margin-bottom:10px;">📌 ${qType}</div>`;
         
-        // 🚀 الكود المدرع: يحاول بـ 4 طرق عشان يعرض الصورة!
+        // 🚀 الكود السحري النهائي: يصلح كل أخطاء ويكيبيديا ويحول أي صورة إلى PNG غصب
         const rawImgSrc = d.fullQuestion.image || d.fullQuestion.img || d.fullQuestion.url || d.fullQuestion.picture;
         if (rawImgSrc) {
             let cleanUrl = rawImgSrc.trim();
+            
+            // تنظيف روابط ويكيبيديا المصغرة إذا كانت خربانة وترجيعها للأصل
+            if(cleanUrl.includes('/thumb/') && cleanUrl.includes('px-')) {
+                cleanUrl = cleanUrl.replace(/\/thumb\//g, '/');
+                cleanUrl = cleanUrl.substring(0, cleanUrl.lastIndexOf('/'));
+            }
+
             let isBase64 = cleanUrl.startsWith('data:image');
             
-            // صندوق الانتظار الذكي
             content.innerHTML += `<div id="img-container-${d.roundNumber}" style="position:relative; width:100%; min-height:150px; background:rgba(0,0,0,0.3); border-radius:15px; border:1px dashed var(--main); display:flex; align-items:center; justify-content:center; margin-bottom:10px;">
                 <span id="img-loading-${d.roundNumber}" style="color:var(--gold); font-size:12px;" class="animate__animated animate__pulse animate__infinite">جاري سحب الصورة... ⏳</span>
             </div>`;
@@ -398,17 +404,16 @@
             img.className = 'q-image';
             img.style.display = 'none';
 
-            // المحركات الأربعة
+            // محركات التحميل الجبارة (أهم واحد يحول أي شيء إلى PNG)
             let proxies = isBase64 ? [cleanUrl] : [
-                cleanUrl, 
-                `https://wsrv.nl/?url=${encodeURIComponent(cleanUrl)}`, 
+                `https://wsrv.nl/?url=${encodeURIComponent(cleanUrl)}&output=png`, 
+                cleanUrl,
                 `https://api.allorigins.win/raw?url=${encodeURIComponent(cleanUrl)}`, 
-                `https://corsproxy.io/?${encodeURIComponent(cleanUrl)}`
+                `https://corsproxy.io/?url=${encodeURIComponent(cleanUrl)}`
             ];
 
             let currentProxyIndex = 0;
 
-            // إذا نجح تحميل الصورة بأي محرك
             img.onload = () => {
                 let container = document.getElementById(`img-container-${d.roundNumber}`);
                 let loading = document.getElementById(`img-loading-${d.roundNumber}`);
@@ -421,23 +426,20 @@
                 }
             };
 
-            // إذا فشل المحرك الحالي، ينقل للي بعده تلقائياً
             img.onerror = () => {
                 currentProxyIndex++;
                 if (currentProxyIndex < proxies.length) {
                     img.src = proxies[currentProxyIndex];
                 } else {
-                    // إذا فشلت كل المحركات (يعني الرابط غلط بالأساس)
                     let loading = document.getElementById(`img-loading-${d.roundNumber}`);
                     if(loading) {
                          loading.className = '';
-                         loading.innerHTML = `🚫 عذراً، هذا الرابط تالف أو ليس صورة.<br><span style="font-size:10px; color:white;">تأكد إن الرابط في ملف questions.json ينتهي بـ .png أو .jpg</span>`;
+                         loading.innerHTML = `🚫 عذراً، حماية الموقع تمنع عرض الصورة هنا.`;
                          loading.style.color = 'var(--red)';
                     }
                 }
             };
 
-            // تشغيل المحرك الأول
             img.src = proxies[0];
         }
         
@@ -650,7 +652,6 @@
 </script>
 </body>
 </html>
-
 
 
 
