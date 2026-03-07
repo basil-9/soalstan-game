@@ -383,14 +383,17 @@
         
         content.innerHTML += `<div style="background:var(--main); color:white; padding:4px 12px; border-radius:12px; display:inline-block; font-size:13px; font-weight:bold; margin-bottom:10px;">📌 ${qType}</div>`;
         
-        // 🚀 الخدعة السحرية: كسر حماية المواقع وعرض الصور إجبارياً
+        // 🚀 بروكسي الدبابة السحري مع إظهار مكان الصورة أثناء التحميل
         const rawImgSrc = d.fullQuestion.image || d.fullQuestion.img || d.fullQuestion.url;
         if (rawImgSrc) {
             let finalImgSrc = rawImgSrc;
             if(rawImgSrc.startsWith('http')) {
-                finalImgSrc = `https://wsrv.nl/?url=${encodeURIComponent(rawImgSrc)}`;
+                finalImgSrc = `https://corsproxy.io/?${encodeURIComponent(rawImgSrc)}`;
             }
-            content.innerHTML += `<br><img src="${finalImgSrc}" class="q-image" onerror="this.style.display='none'">`;
+            content.innerHTML += `<br>
+            <div style="position: relative; display: inline-block; width: 100%; text-align: center;">
+                <img src="${finalImgSrc}" class="q-image" alt="الصورة محجوبة من المصدر 🚫" style="min-height: 150px; background: rgba(255,255,255,0.05);">
+            </div>`;
         }
         
         content.innerHTML += `<h1 style="font-size: 22px; color: var(--main); margin: 5px 0 0 0;">${d.fullQuestion.q}</h1>`;
@@ -602,6 +605,7 @@
 </script>
 </body>
 </html>
+
 
 
 
