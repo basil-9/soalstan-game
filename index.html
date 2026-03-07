@@ -383,16 +383,20 @@
         
         content.innerHTML += `<div style="background:var(--main); color:white; padding:4px 12px; border-radius:12px; display:inline-block; font-size:13px; font-weight:bold; margin-bottom:10px;">📌 ${qType}</div>`;
         
-        // 🚀 بروكسي الدبابة السحري مع إظهار مكان الصورة أثناء التحميل
-        const rawImgSrc = d.fullQuestion.image || d.fullQuestion.img || d.fullQuestion.url;
+        // 🚀 الكود المزدوج الجديد: يجرب الرابط الأساسي، وإذا فشل يحول للبروكسي القوي
+        const rawImgSrc = d.fullQuestion.image || d.fullQuestion.img || d.fullQuestion.url || d.fullQuestion.picture;
         if (rawImgSrc) {
-            let finalImgSrc = rawImgSrc;
-            if(rawImgSrc.startsWith('http')) {
-                finalImgSrc = `https://corsproxy.io/?${encodeURIComponent(rawImgSrc)}`;
-            }
+            let cleanUrl = rawImgSrc.trim();
+            // رابط البروكسي كخطة طوارئ
+            let proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(cleanUrl)}`;
+            
             content.innerHTML += `<br>
             <div style="position: relative; display: inline-block; width: 100%; text-align: center;">
-                <img src="${finalImgSrc}" class="q-image" alt="الصورة محجوبة من المصدر 🚫" style="min-height: 150px; background: rgba(255,255,255,0.05);">
+                <img src="${cleanUrl}" 
+                     onerror="if(!this.dataset.retried) { this.dataset.retried = true; this.src = '${proxyUrl}'; } else { this.alt = 'الصورة محذوفة أو محمية من المصدر 🚫'; this.style.opacity = '0.5'; }" 
+                     class="q-image" 
+                     alt="جاري تحميل الصورة..."
+                     style="min-height: 150px; background: rgba(0,0,0,0.3);">
             </div>`;
         }
         
@@ -605,6 +609,7 @@
 </script>
 </body>
 </html>
+
 
 
 
