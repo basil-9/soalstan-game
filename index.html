@@ -383,13 +383,12 @@
         
         content.innerHTML += `<div style="background:var(--main); color:white; padding:4px 12px; border-radius:12px; display:inline-block; font-size:13px; font-weight:bold; margin-bottom:10px;">📌 ${qType}</div>`;
         
-        // 🚀 المعالج الذكي الجبار لحل جميع مشاكل الصور (خاصة ويكيبيديا و SVG)
+        // 🚀 المعالج الذكي للصور: يحاول يعرض الصورة، وإذا ما قدرت تفتح، يخفيها بسلاسة ويخلي اللعبة تكمل بالنص
         const rawImgSrc = d.fullQuestion.image || d.fullQuestion.img || d.fullQuestion.url || d.fullQuestion.picture;
         if (rawImgSrc) {
             let cleanUrl = rawImgSrc.trim();
-            let isBase64 = cleanUrl.startsWith('data:image');
             
-            content.innerHTML += `<div id="img-container-${d.roundNumber}" style="position:relative; width:100%; min-height:150px; background:rgba(0,0,0,0.3); border-radius:15px; border:1px dashed var(--main); display:flex; align-items:center; justify-content:center; margin-bottom:10px;">
+            content.innerHTML += `<div id="img-container-${d.roundNumber}" style="position:relative; width:100%; min-height:120px; background:rgba(0,0,0,0.2); border-radius:15px; border:1px dashed var(--main); display:flex; align-items:center; justify-content:center; margin-bottom:10px;">
                 <span id="img-loading-${d.roundNumber}" style="color:var(--gold); font-size:12px;" class="animate__animated animate__pulse animate__infinite">جاري سحب الصورة... ⏳</span>
             </div>`;
 
@@ -397,30 +396,10 @@
             img.className = 'q-image';
             img.style.display = 'none';
 
-            let targetUrl = cleanUrl;
-            
-            // محاولة تحويل روابط ويكيبيديا الخام إلى روابط مصغرة شغالة 100%
-            if (cleanUrl.includes('wikimedia.org') && !cleanUrl.includes('/thumb/')) {
-                try {
-                    let parts = cleanUrl.split('/');
-                    let filename = parts[parts.length - 1];
-                    let wikiMatch = cleanUrl.match(/(\/wikipedia\/[a-zA-Z0-9-]+\/)(.+)/);
-                    if(wikiMatch) {
-                        let basePath = cleanUrl.substring(0, wikiMatch.index) + wikiMatch[1];
-                        let restPath = wikiMatch[2];
-                        let ext = cleanUrl.toLowerCase().endsWith('.svg') ? '.png' : ''; 
-                        targetUrl = basePath + "thumb/" + restPath + "/512px-" + filename + ext;
-                    }
-                } catch(e) {}
-            }
-
-            // مصفوفة البروكسيات العنيفة (تكسر أي حماية وتجيب الصورة كـ PNG)
-            let proxies = isBase64 ? [cleanUrl] : [
-                targetUrl, // المحاولة 1: الصورة النظيفة أو المصغرة
-                cleanUrl,  // المحاولة 2: الرابط الأصلي
-                `https://wsrv.nl/?url=${encodeURIComponent(targetUrl)}&output=png`, // المحاولة 3: التحويل السحابي
-                `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`, // المحاولة 4
-                `https://corsproxy.io/?url=${encodeURIComponent(cleanUrl)}` // المحاولة 5
+            let proxies = [
+                cleanUrl,
+                `https://wsrv.nl/?url=${encodeURIComponent(cleanUrl)}&output=png`, 
+                `https://api.allorigins.win/raw?url=${encodeURIComponent(cleanUrl)}`
             ];
 
             let currentProxyIndex = 0;
@@ -437,22 +416,22 @@
                 }
             };
 
-            // إذا فشل رابط، ينتقل للبروكسي اللي بعده تلقائياً
+            // إذا فشلت كل الروابط، ببساطة يخفي مربع الصورة ويقول لك خمن من السؤال!
             img.onerror = () => {
                 currentProxyIndex++;
                 if (currentProxyIndex < proxies.length) {
                     img.src = proxies[currentProxyIndex];
                 } else {
-                    let loading = document.getElementById(`img-loading-${d.roundNumber}`);
-                    if(loading) {
-                         loading.className = '';
-                         loading.innerHTML = `🚫 عذراً، حماية الموقع تمنع عرض الصورة.`;
-                         loading.style.color = 'var(--red)';
+                    let container = document.getElementById(`img-container-${d.roundNumber}`);
+                    if(container) {
+                         container.innerHTML = `<div style="padding: 10px; color: #9ca3af; font-size: 13px;">
+                            <span style="color:var(--red);">🚫 الصورة غير متاحة من المصدر</span><br>اقرأ السؤال وحاول تخمن الإجابة!
+                         </div>`;
+                         container.style.border = '1px solid rgba(239, 68, 68, 0.3)';
                     }
                 }
             };
 
-            // تشغيل المحرك
             img.src = proxies[0];
         }
         
