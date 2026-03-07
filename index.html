@@ -383,17 +383,10 @@
         
         content.innerHTML += `<div style="background:var(--main); color:white; padding:4px 12px; border-radius:12px; display:inline-block; font-size:13px; font-weight:bold; margin-bottom:10px;">📌 ${qType}</div>`;
         
-        // 🚀 الكود السحري النهائي: يصلح كل أخطاء ويكيبيديا ويحول أي صورة إلى PNG غصب
+        // 🚀 المعالج الذكي الجبار لحل جميع مشاكل الصور (خاصة ويكيبيديا و SVG)
         const rawImgSrc = d.fullQuestion.image || d.fullQuestion.img || d.fullQuestion.url || d.fullQuestion.picture;
         if (rawImgSrc) {
             let cleanUrl = rawImgSrc.trim();
-            
-            // تنظيف روابط ويكيبيديا المصغرة إذا كانت خربانة وترجيعها للأصل
-            if(cleanUrl.includes('/thumb/') && cleanUrl.includes('px-')) {
-                cleanUrl = cleanUrl.replace(/\/thumb\//g, '/');
-                cleanUrl = cleanUrl.substring(0, cleanUrl.lastIndexOf('/'));
-            }
-
             let isBase64 = cleanUrl.startsWith('data:image');
             
             content.innerHTML += `<div id="img-container-${d.roundNumber}" style="position:relative; width:100%; min-height:150px; background:rgba(0,0,0,0.3); border-radius:15px; border:1px dashed var(--main); display:flex; align-items:center; justify-content:center; margin-bottom:10px;">
@@ -404,12 +397,30 @@
             img.className = 'q-image';
             img.style.display = 'none';
 
-            // محركات التحميل الجبارة (أهم واحد يحول أي شيء إلى PNG)
+            let targetUrl = cleanUrl;
+            
+            // محاولة تحويل روابط ويكيبيديا الخام إلى روابط مصغرة شغالة 100%
+            if (cleanUrl.includes('wikimedia.org') && !cleanUrl.includes('/thumb/')) {
+                try {
+                    let parts = cleanUrl.split('/');
+                    let filename = parts[parts.length - 1];
+                    let wikiMatch = cleanUrl.match(/(\/wikipedia\/[a-zA-Z0-9-]+\/)(.+)/);
+                    if(wikiMatch) {
+                        let basePath = cleanUrl.substring(0, wikiMatch.index) + wikiMatch[1];
+                        let restPath = wikiMatch[2];
+                        let ext = cleanUrl.toLowerCase().endsWith('.svg') ? '.png' : ''; 
+                        targetUrl = basePath + "thumb/" + restPath + "/512px-" + filename + ext;
+                    }
+                } catch(e) {}
+            }
+
+            // مصفوفة البروكسيات العنيفة (تكسر أي حماية وتجيب الصورة كـ PNG)
             let proxies = isBase64 ? [cleanUrl] : [
-                `https://wsrv.nl/?url=${encodeURIComponent(cleanUrl)}&output=png`, 
-                cleanUrl,
-                `https://api.allorigins.win/raw?url=${encodeURIComponent(cleanUrl)}`, 
-                `https://corsproxy.io/?url=${encodeURIComponent(cleanUrl)}`
+                targetUrl, // المحاولة 1: الصورة النظيفة أو المصغرة
+                cleanUrl,  // المحاولة 2: الرابط الأصلي
+                `https://wsrv.nl/?url=${encodeURIComponent(targetUrl)}&output=png`, // المحاولة 3: التحويل السحابي
+                `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`, // المحاولة 4
+                `https://corsproxy.io/?url=${encodeURIComponent(cleanUrl)}` // المحاولة 5
             ];
 
             let currentProxyIndex = 0;
@@ -426,6 +437,7 @@
                 }
             };
 
+            // إذا فشل رابط، ينتقل للبروكسي اللي بعده تلقائياً
             img.onerror = () => {
                 currentProxyIndex++;
                 if (currentProxyIndex < proxies.length) {
@@ -434,12 +446,13 @@
                     let loading = document.getElementById(`img-loading-${d.roundNumber}`);
                     if(loading) {
                          loading.className = '';
-                         loading.innerHTML = `🚫 عذراً، حماية الموقع تمنع عرض الصورة هنا.`;
+                         loading.innerHTML = `🚫 عذراً، حماية الموقع تمنع عرض الصورة.`;
                          loading.style.color = 'var(--red)';
                     }
                 }
             };
 
+            // تشغيل المحرك
             img.src = proxies[0];
         }
         
@@ -652,6 +665,7 @@
 </script>
 </body>
 </html>
+
 
 
 
