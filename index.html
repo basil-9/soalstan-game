@@ -115,7 +115,7 @@
                 <input type="text" id="player-name" placeholder="اكتب اسمك" class="w-full bg-secondary border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-mutedForeground focus:outline-none focus:border-primary/60 transition-colors">
                 
                 <div class="flex gap-2">
-                    <input type="text" id="room-id" placeholder="كود الغرفة" class="flex-1 bg-secondary border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-mutedForeground focus:outline-none focus:border-primary/60 transition-colors tracking-widest text-center uppercase">
+                    <input type="tel" id="room-id" placeholder="كود الغرفة" class="flex-1 bg-secondary border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-mutedForeground focus:outline-none focus:border-primary/60 transition-colors tracking-widest text-center">
                     <button onclick="generateCode()" class="shrink-0 w-12 h-12 rounded-xl border border-border bg-secondary flex items-center justify-center text-primary hover:bg-primary/10 transition-colors" title="كود عشوائي">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><circle cx="15.5" cy="8.5" r="1.5"></circle><circle cx="15.5" cy="15.5" r="1.5"></circle><circle cx="8.5" cy="15.5" r="1.5"></circle></svg>
                     </button>
@@ -261,7 +261,7 @@
 
     const socket = io();
     let myInfo = {}, isLeader = false, timerInt, roomSettings = {};
-    let allPlayers = {}, myBluffText = "", currentCorrectAnswer = "";
+    let allPlayers = {}, myBluffText = "", currentCorrectAnswer = "", currentQuestionText = "";
     let selectedAvatarUrl = ""; 
     let selectedCategories = []; 
     let mainCategoriesMap = {};
@@ -277,6 +277,18 @@
     function normalizeArabic(text) {
         if (!text) return "";
         return text.replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/[ىي]/g, 'ي').replace(/[\u064B-\u065F]/g, '').trim();
+    }
+
+    // --- التعديل الثاني: التحقق من التكلجة والإجابات المشابهة ---
+    function isTooSimilar(a, b) {
+        a = normalizeArabic(a); b = normalizeArabic(b);
+        if(a === b) return true;
+        if(a.includes(b) && a.length - b.length <= 2) return true;
+        if(b.includes(a) && b.length - a.length <= 2) return true;
+        let diff = 0; let min = Math.min(a.length, b.length);
+        for(let i=0; i<min; i++) { if(a[i] !== b[i]) diff++; }
+        diff += Math.abs(a.length - b.length);
+        return diff <= 2 && a.length > 2; 
     }
 
     const AVATAR_STYLES = [
@@ -362,8 +374,10 @@
     }
     setInterval(updateClock, 1000); updateClock();
 
+    // --- التعديل الأول: كود الغرفة أرقام فقط ---
     function generateCode() { 
-        playSnd('click'); document.getElementById('room-id').value = "GAME-" + Math.floor(1000 + Math.random() * 9000); 
+        playSnd('click'); 
+        document.getElementById('room-id').value = Math.floor(10000 + Math.random() * 90000).toString(); 
     }
     function copyRoomCode() { navigator.clipboard.writeText(myInfo.room); alert("تم النسخ!"); }
 
@@ -427,7 +441,9 @@
     });
 
     socket.on('startBluffPhase', d => {
-        currentCorrectAnswer = d.fullQuestion.a; 
+        currentCorrectAnswer = d.fullQuestion.a;
+        currentQuestionText = d.fullQuestion.q; // حفظ السؤال عشان نعرضه بالنتيجة
+
         document.getElementById('lobby-area').classList.add('hidden');
         document.getElementById('question-area').classList.remove('hidden');
         document.getElementById('current-round').innerText = d.roundNumber;
@@ -455,7 +471,11 @@
         playSnd('click');
         let bluff = document.getElementById('my-bluff').value.trim();
         if(!bluff) return alert("اكتب إجابة للخدعة!");
-        if(normalizeArabic(bluff) === normalizeArabic(currentCorrectAnswer)) return alert("هذي الإجابة الصح! اكتب شيء غلط للخدعة");
+        
+        // استخدام دالة التكلجة الجديدة
+        if(isTooSimilar(bluff, currentCorrectAnswer)) {
+            return alert("الإجابة هذي صحيحة أو قريبة جداً من الصح! اكتب شيء غلط عشان تخدعهم 🦊");
+        }
 
         myBluffText = bluff;
         document.getElementById('bluff-area').classList.add('hidden');
@@ -510,8 +530,14 @@
         
         document.getElementById('options').classList.add('hidden');
         document.getElementById('bluff-area').classList.add('hidden');
-        document.getElementById('q-content').innerHTML = '<h2 class="animate__animated animate__pulse animate__infinite text-gold text-xl my-10 font-heading">جاري تحضير الجولة... ⏳</h2>';
         document.getElementById('status-text').innerHTML = '';
+        
+        // --- التعديل الثالث: شكل الإجابة الصحيحة تحت السؤال ---
+        document.getElementById('q-content').innerHTML = `
+            <h1 class="text-xl font-heading text-white/90 leading-relaxed px-2 mb-3">${currentQuestionText}</h1>
+            <div class="text-success font-bold text-xl mb-6">✅ الجواب: ${d.correctAns}</div>
+            <div class="animate__animated animate__pulse animate__infinite text-gold text-sm">جاري تحضير الجولة... ⏳</div>
+        `;
         
         let resHtml = "";
         let myRes = d.results[socket.id];
@@ -527,13 +553,8 @@
             </div>`;
         }
 
-        document.getElementById('result-detail').innerHTML = `
-            <div class="mb-4 w-full">${resHtml}</div>
-            <div class="bg-success/20 border border-success p-3 rounded-xl">
-                <span class="text-xs text-white block mb-1">الجواب الحقيقي:</span>
-                <span class="text-success text-2xl font-bold">${d.correctAns}</span>
-            </div>
-        `;
+        // إزالة المربع الأخضر القديم والاكتفاء بعرض نتائج اللاعبين
+        document.getElementById('result-detail').innerHTML = `<div class="mb-2 w-full">${resHtml}</div>`;
 
         if(myRes.pointsGained > 0) playSnd('correct'); else playSnd('wrong');
         setTimeout(() => { ov.style.display = 'none'; document.getElementById('decisive-alert').classList.add('hidden'); }, 6000); 
