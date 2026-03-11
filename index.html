@@ -23,8 +23,7 @@
         .select-box option { background-color: #0b0e14; color: white; }
 
         #result-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 85%; padding: 25px; border-radius: 20px; display: none; text-align: center; z-index: 200; backdrop-filter: blur(15px); border: 4px solid; background: rgba(0,0,0,0.95); box-sizing: border-box; }
-        .q-image { max-width: 100%; max-height: 250px; border-radius: 15px; margin-top: 10px; border: 2px solid var(--main); object-fit: contain; }
-
+        
         .top-info-bar { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 15px; width: 100%; position: relative; margin-bottom: 10px; box-sizing: border-box; }
         #real-time-clock { position: absolute; left: 50%; transform: translateX(-50%); color: var(--gold); font-weight: bold; font-size: 14px; border: 1px solid rgba(250, 204, 21, 0.3); padding: 2px 8px; border-radius: 8px; white-space: nowrap; }
         
@@ -59,8 +58,10 @@
         .confetti { position: fixed; width: 10px; height: 10px; z-index: 9999; animation: fall linear forwards; opacity: 0.8; }
         @keyframes fall { to { transform: translateY(100vh) rotate(720deg); opacity: 0; } }
 
-        /* تصميم نافذة الإحصائيات السرية */
-        #admin-modal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:rgba(15,23,42,0.98); border:2px solid var(--gold); padding:25px; border-radius:20px; z-index:9999; text-align:center; box-shadow: 0 0 30px rgba(250, 204, 21, 0.4); width: 80%; max-width: 350px;}
+        /* نوافذ الإحصائيات وكيف تلعب */
+        .modal-box { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:rgba(15,23,42,0.98); padding:25px; border-radius:20px; z-index:9999; text-align:center; width: 85%; max-width: 350px; }
+        #admin-modal { border:2px solid var(--gold); box-shadow: 0 0 30px rgba(250, 204, 21, 0.4); }
+        #howto-modal { border:2px solid var(--green); box-shadow: 0 0 30px rgba(34, 197, 94, 0.4); text-align: right; }
     </style>
 </head>
 <body>
@@ -70,12 +71,28 @@
 
 <div onclick="openAdminStats()" style="position: fixed; bottom: 10px; left: 10px; opacity: 0.05; cursor: pointer; font-size: 14px; z-index: 10000; width: 30px; height: 30px; text-align: center; line-height: 30px;">📊</div>
 
-<div id="admin-modal" class="animate__animated animate__zoomIn">
+<div id="admin-modal" class="modal-box animate__animated animate__zoomIn">
     <h2 style="color:var(--gold); margin-top:0;">👑 إحصائيات المخرج</h2>
     <hr style="border-color: rgba(255,255,255,0.1);">
     <h3 style="color:white; margin: 15px 0;">المتصلين الآن: <span id="stat-online" style="color:var(--green); font-size: 28px;">0</span></h3>
     <h3 style="color:white; margin: 15px 0;">إجمالي الزيارات: <span id="stat-total" style="color:var(--main); font-size: 28px;">0</span></h3>
     <button onclick="document.getElementById('admin-modal').style.display='none'" class="btn-game" style="font-size: 14px; padding: 5px;">إغلاق</button>
+</div>
+
+<div id="howto-modal" class="modal-box animate__animated animate__fadeIn">
+    <h2 style="color:var(--green); text-align:center; margin-top:0;">كيف تلعب سؤالستان؟ 🎮</h2>
+    <hr style="border-color: rgba(255,255,255,0.1);">
+    <ul style="line-height: 1.8; font-size: 14px; padding-right: 20px; color: white;">
+        <li>القائد ينسخ <b>كود الغرفة</b> ويرسله لأخوياه.</li>
+        <li>يطلع لك سؤال، وكل واحد يكتب <b>إجابة كذبية (خدعة)</b> عشان يوهق الباقين.</li>
+        <li>تطلع كل الإجابات (الصح + الكذب)، ولازم تختار الجواب الحقيقي بدون ما تطيح بالفخ.</li>
+        <li>إذا جاوبت صح تاخذ <b>50 نقطة</b> ✅.</li>
+        <li>إذا أحد اختار كذبتك تاخذ <b>20 نقطة</b> على كل ضحية طاح بفخك 🦊.</li>
+        <li>الجولة الأخيرة حاسمة ونقاطها <b>مضاعفة</b> 🔥.</li>
+    </ul>
+    <div style="text-align:center; margin-top: 15px;">
+        <button onclick="document.getElementById('howto-modal').style.display='none'" class="btn-game" style="font-size: 14px; padding: 5px 15px; border-color:var(--green); color:var(--green);">فهمت، يلا نلعب!</button>
+    </div>
 </div>
 
 <button id="exit-btn" style="position:absolute; top:15px; left:15px; z-index:1001; background:none; color:white; border:1px solid white; padding:5px 12px; border-radius:10px; cursor:pointer; font-size: 12px; display:none;" onclick="exitGame()">⬅ خروج</button>
@@ -130,7 +147,8 @@
             </div>
         </div>
 
-        <button class="btn-game" style="background:var(--main); color:white; border:none; margin-top: 20px;" onclick="joinGame()">دخول اللعبة 🚀</button>
+        <button class="btn-game" style="background:var(--main); color:white; border:none; margin-top: 15px;" onclick="joinGame()">دخول اللعبة 🚀</button>
+        <button class="btn-game" style="background:transparent; border-color:var(--green); color:var(--green); margin-top: 10px; font-size: 15px;" onclick="document.getElementById('howto-modal').style.display='block'">كيف تلعب ❓</button>
     </div>
 </div>
 
@@ -433,7 +451,6 @@
         
         content.innerHTML += `<div style="background:var(--main); color:white; padding:4px 12px; border-radius:12px; display:inline-block; font-size:13px; font-weight:bold; margin-bottom:10px;">📌 ${qType}</div>`;
         
-        // عشان نضمن إذا رجعت تحط صور في المستقبل ما تخرب اللعبة
         const rawImgSrc = d.fullQuestion.image || d.fullQuestion.img || d.fullQuestion.url || d.fullQuestion.picture;
         if (rawImgSrc) {
             let cleanUrl = rawImgSrc.trim();
@@ -692,15 +709,6 @@
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
 
 
 
