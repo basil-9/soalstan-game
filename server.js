@@ -3,19 +3,17 @@ const http = require('http');
 const { Server } = require('socket.io');
 const fs = require('fs');
 const path = require('path');
-const https = require('https'); // استدعينا مكتبة الاتصال الخارجي
+const https = require('https');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// --- 👑 إحصائيات المخرج الدائمة 👑 ---
+// --- إحصائيات المخرج ---
 let totalVisits = 0; 
 let currentOnline = 0; 
 
-// دالة سحرية للتواصل مع قاعدة البيانات الخارجية المجانية لحفظ العداد للأبد
 function updateCounterAPI(action) {
-    // استخدمنا مساحة خاصة باسم لعبتك
     const url = `https://api.counterapi.dev/v1/sualistan_game_v1/total_visits${action}`;
     https.get(url, (res) => {
         let data = '';
@@ -23,32 +21,28 @@ function updateCounterAPI(action) {
         res.on('end', () => {
             try {
                 const parsed = JSON.parse(data);
-                if (parsed.count !== undefined) {
-                    totalVisits = parsed.count; // تحديث العداد بالرقم الدائم المحفوظ
-                }
+                if (parsed.count !== undefined) totalVisits = parsed.count; 
             } catch (e) {}
         });
     }).on('error', (err) => {
-        // في حال تعطلت الخدمة الخارجية، يكمل العداد محلياً عشان ما تخرب اللعبة
         if (action === '/up') totalVisits++; 
     });
 }
 
-// أول ما يشتغل السيرفر، يروح يسحب الرقم الدائم القديم
 updateCounterAPI('');
 
-
-// حل مشكلة تحميل ملف الأسئلة
 app.get('/questions.json', (req, res) => {
     let qPath = path.join(__dirname, 'questions.json');
     if (!fs.existsSync(qPath)) qPath = path.join(__dirname, 'public', 'questions.json');
+    
+    // منع الكاش عشان المتصفح يسحب الأسئلة الجديدة دائماً
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     res.sendFile(qPath);
 });
 
 app.use(express.static(__dirname));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// تحميل الأسئلة للسيرفر للتحكيم
 let allQuestions = [];
 try {
     let qPath = path.join(__dirname, 'questions.json');
@@ -76,13 +70,10 @@ function shuffleArray(array) {
 }
 
 io.on('connection', (socket) => {
-    // زيادة العداد في قاعدة البيانات الخارجية بشكل دائم!
     updateCounterAPI('/up');
     currentOnline++;
 
-    // 🕵️‍♂️ استقبال طلب الإحصائيات السري من اللعبة
     socket.on('requestAdminStats', (pin) => {
-        // الرقم السري هو 1234
         if (pin === '1234') {
             socket.emit('adminStatsResponse', { online: currentOnline, total: totalVisits });
         } else {
@@ -103,6 +94,7 @@ io.on('connection', (socket) => {
                 settings: settings,
                 currentRound: 0,
                 questions: [],
+                playedQuestions: [], // 🧠 ذاكرة الغرفة عشان ما يتكرر السؤال
                 bluffs: {},
                 votes: {},
                 stats: {} 
@@ -117,15 +109,30 @@ io.on('connection', (socket) => {
         const room = rooms[socket.roomID];
         if (room && room.leader === socket.id) {
             let pool = allQuestions;
+            
+            // 1. فلترة التصنيفات
             if (room.settings.categories && room.settings.categories.length > 0) {
                 pool = allQuestions.filter(q => {
                     let cat = q.category || q.hint || q.type;
                     return room.settings.categories.some(c => cat.includes(c));
                 });
             }
-            if (pool.length < room.settings.maxRounds) pool = allQuestions; 
+
+            // 2. فلترة الأسئلة اللي انلعبت قبل كذا في نفس الغرفة! (يمنع التكرار)
+            let unplayedPool = pool.filter(q => !room.playedQuestions.includes(q.q));
+
+            // 3. إذا خلصت الأسئلة اللي ما انلعبت، صفر الذاكرة وارجع خذ من جديد
+            if (unplayedPool.length < room.settings.maxRounds) {
+                room.playedQuestions = []; // تصفير الذاكرة
+                unplayedPool = pool;
+            }
+
+            // 4. خلط وسحب الأسئلة
+            room.questions = shuffleArray([...unplayedPool]).slice(0, room.settings.maxRounds);
             
-            room.questions = shuffleArray([...pool]).slice(0, room.settings.maxRounds);
+            // 5. حفظ الأسئلة المسحوبة في الذاكرة عشان ما تتكرر الجيم الجاي
+            room.questions.forEach(q => room.playedQuestions.push(q.q));
+
             room.currentRound = 0;
             
             Object.keys(room.players).forEach(pid => {
@@ -304,7 +311,6 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`🚀 السيرفر شغال على البورت ${PORT}`);
 });
-
 
 
 
