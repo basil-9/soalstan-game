@@ -28,7 +28,6 @@
                         mutedForeground: "hsl(0, 0%, 60%)"
                     },
                     fontFamily: {
-                        // ضفنا خطوط النظام الإجبارية لمنع تقطيع الحروف
                         heading: ['"Cairo Play"', 'system-ui', '-apple-system', 'sans-serif'],
                         body: ['"IBM Plex Sans Arabic"', 'system-ui', '-apple-system', 'sans-serif']
                     }
@@ -47,6 +46,10 @@
         .animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
         @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 0 0 hsla(27, 38%, 55%, 0); } 50% { box-shadow: 0 0 15px 5px hsla(27, 38%, 55%, 0.3); } }
         
+        /* التوهج الذهبي لمنصة الفوز */
+        .gold-glow { box-shadow: 0 0 30px hsla(43, 96%, 56%, 0.3); }
+        .stat-value { font-variant-numeric: tabular-nums; }
+
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: hsl(27, 38%, 55%); border-radius: 10px; }
 
@@ -178,10 +181,18 @@
 
                 <div id="leader-tag" class="hidden text-gold font-bold text-[11px] text-center mb-2 bg-gold/10 py-1 rounded-md border border-gold/30">👑 أنت القائد</div>
 
-                <div id="win-screen" class="hidden flex-col items-center flex-1 justify-center animate__animated animate__zoomIn">
-                    <div id="winner-text" class="w-full text-center"></div>
-                    <button id="restart-btn" class="hidden mt-6 bg-primary text-background py-2.5 px-6 rounded-xl font-bold hover:brightness-110 active:scale-95" onclick="socket.emit('restartGame')">إعادة اللعب بنفس الغرفة 🔄</button>
-                    <div id="wait-restart-text" class="hidden mt-6 text-gold text-sm animate__pulse animate__infinite">بانتظار القائد لإعادة اللعبة... ⏳</div>
+                <div id="win-screen" class="hidden flex-col items-center w-full justify-center py-2">
+                    <div id="winner-text" class="w-full"></div>
+                    
+                    <div id="restart-btn-container" class="hidden flex-row gap-3 mt-8 w-full justify-center animate__animated animate__fadeInUp" style="animation-delay: 1.5s;">
+                        <button onclick="exitGame()" class="bg-secondary/80 border border-white/10 text-white py-3 px-5 rounded-xl font-bold hover:bg-secondary transition active:scale-95 flex items-center justify-center gap-2 shadow-sm text-sm w-1/3">
+                            الرئيسية 🏰
+                        </button>
+                        <button onclick="socket.emit('restartGame')" class="bg-gradient-to-r from-primary to-gold text-background py-3 px-5 rounded-xl font-bold hover:brightness-110 transition active:scale-95 flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(250,204,21,0.4)] text-sm flex-1">
+                            لعبة جديدة 🔄
+                        </button>
+                    </div>
+                    <div id="wait-restart-text" class="hidden mt-8 text-gold text-xs sm:text-sm animate__pulse animate__infinite font-medium bg-gold/10 px-6 py-2 rounded-full border border-gold/20">بانتظار القائد لبدء لعبة جديدة... ⏳</div>
                 </div>
 
                 <div id="lobby-area" class="flex-1 flex flex-col items-center justify-center text-center">
@@ -467,7 +478,6 @@
         
         let qType = d.fullQuestion.category || d.fullQuestion.hint || 'سؤال عام';
         
-        // تم إضافة ستايلات لمنع تفكك الحروف واستخدام خط النظام الموثوق font-body
         document.getElementById('q-content').innerHTML = `
             <div class="bg-primary/20 text-primary px-3 py-1 rounded-lg text-xs font-bold inline-block mx-auto mb-4 border border-primary/30">📌 ${qType}</div>
             <h1 class="text-2xl font-body font-bold text-white leading-relaxed px-2" style="direction: rtl; unicode-bidi: isolate;">${d.fullQuestion.q}</h1>
@@ -620,6 +630,7 @@
         }
     }
 
+    // هنا برمجة شاشة الفوز الجديدة (من هو ملك الخدع؟)
     socket.on('gameOver', d => {
         document.getElementById('lobby-area').classList.add('hidden');
         document.getElementById('question-area').classList.add('hidden');
@@ -627,38 +638,116 @@
         
         let pArray = Object.values(d.players).sort((a,b) => b.points - a.points);
         
-        let html = `<h1 class="text-4xl font-heading text-gold mb-8 drop-shadow-[0_0_15px_rgba(250,204,21,0.5)]">🏆 أبطال سؤالستان</h1><div class="flex items-end justify-center gap-4 mb-8">`;
+        let html = `
+            <div class="text-center mb-10 animate__animated animate__fadeInDown">
+                <h1 class="text-4xl sm:text-5xl md:text-6xl font-heading font-black shimmer-text mb-3 text-white">انتهت اللعبة!</h1>
+                <p class="text-mutedForeground text-xs sm:text-sm md:text-base font-medium">من هو ملك الخدع اليوم؟</p>
+            </div>
+            
+            <div class="flex items-end justify-center gap-4 sm:gap-6 mb-10">
+        `;
         
-        if(pArray[1]) html += `<div class="flex flex-col items-center animate__animated animate__fadeInUp" style="animation-delay: 0.5s"><img src="${pArray[1].avatar}" class="w-16 h-16 rounded-full border-4 border-slate-300 bg-black/50 shadow-[0_0_15px_rgba(203,213,225,0.5)]"><span class="text-slate-300 font-bold mt-2 text-sm truncate w-20">🥈 ${pArray[1].name}</span><span class="text-xs bg-black/50 px-2 py-0.5 rounded-full mt-1 text-gold">${pArray[1].points}</span></div>`;
-        if(pArray[0]) html += `<div class="flex flex-col items-center relative z-10 mx-2 animate__animated animate__zoomIn"><div class="absolute -top-8 text-4xl drop-shadow-[0_0_10px_rgba(250,204,21,0.8)]">👑</div><img src="${pArray[0].avatar}" class="w-24 h-24 rounded-full border-4 border-gold bg-black/50 shadow-[0_0_25px_rgba(250,204,21,0.6)]"><span class="text-gold font-bold mt-2 text-base truncate w-24">🥇 ${pArray[0].name}</span><span class="text-xs bg-black/50 px-3 py-1 rounded-full mt-1 text-gold border border-gold/30">${pArray[0].points}</span></div>`;
-        if(pArray[2]) html += `<div class="flex flex-col items-center animate__animated animate__fadeInUp" style="animation-delay: 1s"><img src="${pArray[2].avatar}" class="w-14 h-14 rounded-full border-4 border-amber-700 bg-black/50 shadow-[0_0_15px_rgba(180,83,9,0.5)]"><span class="text-amber-600 font-bold mt-2 text-sm truncate w-20">🥉 ${pArray[2].name}</span><span class="text-xs bg-black/50 px-2 py-0.5 rounded-full mt-1 text-gold">${pArray[2].points}</span></div>`;
-        
-        html += `</div>`;
-
-        if(pArray.length > 3) {
-            html += `<div class="bg-black/30 border border-border rounded-xl p-3 max-h-32 overflow-y-auto custom-scrollbar mb-4 w-full">`;
-            for(let i=3; i<pArray.length; i++) html += `<div class="flex justify-between text-xs text-white/80 py-1 border-b border-white/5 last:border-0"><span>${i+1}. ${pArray[i].name}</span><span>${pArray[i].points} نقطة</span></div>`;
-            html += `</div>`;
+        // المركز الثاني (يمين في اللغة العربية)
+        if(pArray[1]) {
+            html += `
+            <div class="flex flex-col items-center animate__animated animate__fadeInUp" style="animation-delay: 0.4s">
+                <div class="relative mb-3">
+                    <img src="${pArray[1].avatar}" class="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-[3px] border-slate-400 bg-card object-cover shadow-[0_0_15px_rgba(148,163,184,0.2)]">
+                    <div class="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-slate-400 border-2 border-background flex items-center justify-center text-background font-black text-xs shadow-md">2</div>
+                </div>
+                <div class="w-28 sm:w-36 bg-secondary/60 border border-white/5 rounded-2xl py-3 flex flex-col items-center justify-center shadow-lg">
+                    <span class="font-bold text-foreground mb-0.5 text-xs sm:text-sm truncate w-11/12 text-center">${pArray[1].name}</span>
+                    <span class="text-gold font-black text-lg stat-value">${pArray[1].points}</span>
+                </div>
+            </div>`;
         }
+        
+        // المركز الأول (وسط)
+        if(pArray[0]) {
+            html += `
+            <div class="flex flex-col items-center relative z-10 animate__animated animate__zoomIn" style="animation-delay: 0.1s">
+                <div class="absolute -top-10 text-5xl drop-shadow-[0_0_15px_rgba(250,204,21,0.8)] z-20 animate__animated animate__bounceIn" style="animation-delay: 0.8s">👑</div>
+                <div class="relative mb-4">
+                    <img src="${pArray[0].avatar}" class="w-28 h-28 sm:w-32 sm:h-32 rounded-full border-[3px] border-gold bg-card object-cover gold-glow">
+                    <div class="absolute -top-1 -right-1 w-8 h-8 rounded-full bg-gold border-2 border-background flex items-center justify-center text-background font-black text-sm shadow-lg">1</div>
+                </div>
+                <div class="w-36 sm:w-48 bg-gradient-to-b from-gold/10 to-card border border-gold/30 rounded-2xl py-4 flex flex-col items-center justify-center shadow-[0_10px_30px_-10px_rgba(250,204,21,0.3)]">
+                    <span class="font-bold text-foreground mb-0.5 text-sm sm:text-base truncate w-11/12 text-center">${pArray[0].name}</span>
+                    <span class="text-gold font-black text-2xl stat-value mb-0.5">${pArray[0].points}</span>
+                    <span class="text-[9px] text-gold/70 font-medium">البطل الحالي</span>
+                </div>
+            </div>`;
+        }
+        
+        // المركز الثالث (يسار)
+        if(pArray[2]) {
+            html += `
+            <div class="flex flex-col items-center animate__animated animate__fadeInUp" style="animation-delay: 0.6s">
+                <div class="relative mb-3">
+                    <img src="${pArray[2].avatar}" class="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-[3px] border-amber-700 bg-card object-cover shadow-[0_0_15px_rgba(180,83,9,0.2)]">
+                    <div class="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-amber-600 border-2 border-background flex items-center justify-center text-background font-black text-xs shadow-md">3</div>
+                </div>
+                <div class="w-28 sm:w-36 bg-secondary/60 border border-white/5 rounded-2xl py-3 flex flex-col items-center justify-center shadow-lg">
+                    <span class="font-bold text-foreground mb-0.5 text-xs sm:text-sm truncate w-11/12 text-center">${pArray[2].name}</span>
+                    <span class="text-gold font-black text-lg stat-value">${pArray[2].points}</span>
+                </div>
+            </div>`;
+        }
+        
+        html += `</div>`; 
 
+        // الألقاب (البادجات) أسفل المنصة
         if (d.titles.bluffer || d.titles.victim || d.titles.nerd) {
-            html += `<div class="bg-secondary/50 border border-gold/50 rounded-xl p-4 text-right animate__animated animate__bounceInUp w-full">
-                <h3 class="text-gold text-center font-heading text-lg mb-3">🎭 ألقاب الشرف والفضايح</h3>`;
-            if (d.titles.bluffer) html += `<div class="text-sm mb-2">🦊 <span class="text-gold font-bold">أكبر نصاب:</span> ${d.titles.bluffer}</div>`;
-            if (d.titles.victim) html += `<div class="text-sm mb-2">🤡 <span class="text-destructive font-bold">الضحية:</span> ${d.titles.victim}</div>`;
-            if (d.titles.nerd) html += `<div class="text-sm">🤓 <span class="text-success font-bold">الدافور:</span> ${d.titles.nerd}</div>`;
-            html += `</div>`;
+            html += `<div class="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full animate__animated animate__fadeInUp" style="animation-delay: 1s">`;
+            
+            if (d.titles.victim) {
+                html += `
+                <div class="bg-secondary/40 border border-white/5 rounded-xl p-3 flex items-center justify-between shadow-sm">
+                    <div class="text-right">
+                        <div class="text-[9px] text-mutedForeground mb-0.5">الضحية (أكثر من تم خداعه)</div>
+                        <div class="font-bold text-xs text-foreground truncate max-w-[100px]">${d.titles.victim}</div>
+                    </div>
+                    <div class="text-2xl drop-shadow-md">🤡</div>
+                </div>`;
+            }
+            
+            if (d.titles.bluffer) {
+                html += `
+                <div class="bg-secondary/40 border border-white/5 rounded-xl p-3 flex items-center justify-between shadow-sm">
+                    <div class="text-right">
+                        <div class="text-[9px] text-mutedForeground mb-0.5">الثعلب المكار (أكثر خدعة نجحت)</div>
+                        <div class="font-bold text-xs text-foreground truncate max-w-[100px]">${d.titles.bluffer}</div>
+                    </div>
+                    <div class="text-2xl drop-shadow-md">🦊</div>
+                </div>`;
+            }
+            
+            if (d.titles.nerd) {
+                html += `
+                <div class="bg-secondary/40 border border-white/5 rounded-xl p-3 flex items-center justify-between shadow-sm">
+                    <div class="text-right">
+                        <div class="text-[9px] text-mutedForeground mb-0.5">نيرد الجولة (الأكثر دقة)</div>
+                        <div class="font-bold text-xs text-foreground truncate max-w-[100px]">${d.titles.nerd}</div>
+                    </div>
+                    <div class="text-2xl drop-shadow-md">🧠</div>
+                </div>`;
+            }
+            
+            html += `</div>`; 
         }
             
         document.getElementById('winner-text').innerHTML = html;
         document.getElementById('win-screen').classList.remove('hidden');
         document.getElementById('win-screen').classList.add('flex');
         
+        // إظهار أزرار التحكم بالقائد
         if(isLeader) {
-            document.getElementById('restart-btn').classList.remove('hidden');
+            document.getElementById('restart-btn-container').classList.remove('hidden');
+            document.getElementById('restart-btn-container').classList.add('flex');
             document.getElementById('wait-restart-text').classList.add('hidden');
         } else {
-            document.getElementById('restart-btn').classList.add('hidden');
+            document.getElementById('restart-btn-container').classList.add('hidden');
+            document.getElementById('restart-btn-container').classList.remove('flex');
             document.getElementById('wait-restart-text').classList.remove('hidden');
         }
         
