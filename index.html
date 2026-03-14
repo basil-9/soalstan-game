@@ -629,7 +629,7 @@
         }
     }
 
-    // هنا التحديث العظيم: استخدام صور 3D للملصقات (نفس الآيفون بالملي)
+    // واجهة الفوز المتطابقة مع التصميم (تداخل الشخصيات والمربعات)
     socket.on('gameOver', d => {
         document.getElementById('lobby-area').classList.add('hidden');
         document.getElementById('question-area').classList.add('hidden');
@@ -661,13 +661,12 @@
             </div>`;
         }
         
-        // المركز الأول (وسط) - مع تاج آبل 3D
+        // المركز الأول (وسط)
         if(pArray[0]) {
             html += `
             <div class="relative flex flex-col items-center z-10 animate__animated animate__zoomIn w-[40%]" style="animation-delay: 0.1s">
                 <div class="relative z-20 -mb-8 sm:-mb-10">
-                    <img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Apple-Color-Emoji/master/Images/Clothing/Crown.png" class="absolute -top-8 sm:-top-10 left-1/2 -translate-x-1/2 w-10 h-10 sm:w-14 sm:h-14 drop-shadow-[0_0_15px_rgba(250,204,21,0.8)] z-30 animate__animated animate__bounceIn" style="animation-delay: 0.8s">
-                    
+                    <div class="absolute -top-6 sm:-top-8 left-1/2 -translate-x-1/2 text-4xl sm:text-5xl drop-shadow-[0_0_15px_rgba(250,204,21,0.8)] z-30 animate__animated animate__bounceIn" style="animation-delay: 0.8s">👑</div>
                     <img src="${pArray[0].avatar}" class="w-20 h-20 sm:w-28 sm:h-28 rounded-full border-[3px] border-gold bg-card object-cover gold-glow relative z-10">
                     <div class="absolute -top-1 -right-1 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-gold border-2 border-background flex items-center justify-center text-background font-black text-xs sm:text-sm shadow-lg z-20">1</div>
                 </div>
@@ -696,7 +695,7 @@
         
         html += `</div>`; 
 
-        // الألقاب (البادجات) - تم استبدال الفيسات بصور آبل الأصلية
+        // الألقاب والتصنيفات (البادجات)
         if (d.titles.bluffer || d.titles.victim || d.titles.nerd) {
             html += `<div class="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-lg mx-auto animate__animated animate__fadeInUp" style="animation-delay: 1s">`;
             
@@ -707,7 +706,7 @@
                         <div class="text-[9px] sm:text-[10px] text-mutedForeground mb-1">الضحية (أكثر من تم خداعه)</div>
                         <div class="font-bold text-xs sm:text-sm text-foreground truncate">${d.titles.victim}</div>
                     </div>
-                    <img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Apple-Color-Emoji/master/Images/Smileys/Clown%20Face.png" class="w-8 h-8 sm:w-10 sm:h-10 shrink-0 drop-shadow-md">
+                    <div class="text-3xl shrink-0 drop-shadow-md">🤡</div>
                 </div>`;
             }
             
@@ -718,7 +717,7 @@
                         <div class="text-[9px] sm:text-[10px] text-mutedForeground mb-1">الثعلب المكار (أكثر خدعة نجحت)</div>
                         <div class="font-bold text-xs sm:text-sm text-foreground truncate">${d.titles.bluffer}</div>
                     </div>
-                    <img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Apple-Color-Emoji/master/Images/Animals/Fox.png" class="w-8 h-8 sm:w-10 sm:h-10 shrink-0 drop-shadow-md">
+                    <div class="text-3xl shrink-0 drop-shadow-md">🦊</div>
                 </div>`;
             }
             
@@ -729,7 +728,7 @@
                         <div class="text-[9px] sm:text-[10px] text-mutedForeground mb-1">نيرد الجولة (الأكثر دقة)</div>
                         <div class="font-bold text-xs sm:text-sm text-foreground truncate">${d.titles.nerd}</div>
                     </div>
-                    <img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Apple-Color-Emoji/master/Images/Smileys/Brain.png" class="w-8 h-8 sm:w-10 sm:h-10 shrink-0 drop-shadow-md">
+                    <div class="text-3xl shrink-0 drop-shadow-md">🧠</div>
                 </div>`;
             }
             
