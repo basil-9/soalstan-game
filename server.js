@@ -9,9 +9,10 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// --- إحصائيات المخرج ---
+// إحصائيات المخرج
 let totalVisits = 0; 
 let currentOnline = 0; 
+const leaderMemory = {}; // 🧠 الذاكرة القوية لمنع التكرار للقائد في كل الغرف
 
 function updateCounterAPI(action) {
     const url = `https://api.counterapi.dev/v1/sualistan_game_v1/total_visits${action}`;
@@ -83,7 +84,7 @@ io.on('connection', (socket) => {
         const { roomID, name, avatar, settings } = data;
         socket.join(roomID);
         socket.roomID = roomID;
-        socket.playerName = name; // لحفظ اسم اللاعب
+        socket.playerName = name; 
 
         if (!rooms[roomID]) {
             rooms[roomID] = {
@@ -93,14 +94,13 @@ io.on('connection', (socket) => {
                 settings: settings,
                 currentRound: 0,
                 questions: [],
-                playedQuestions: [], 
                 bluffs: {},
                 votes: {},
                 stats: {},
-                phase: 'lobby', // نظام تتبع حالة اللعبة
+                phase: 'lobby', 
                 currentQuestionPayload: null,
                 currentOptionsPayload: null,
-                pointsHistory: {}, // ذاكرة النقاط للي يطلع ويرجع
+                pointsHistory: {}, 
                 savedStats: {},
                 savedBluffs: {},
                 savedVotes: {}
@@ -108,12 +108,9 @@ io.on('connection', (socket) => {
         }
 
         const room = rooms[roomID];
-
-        // 🧠 نظام استعادة اللاعب إذا انقطع الاتصال أو حدث الصفحة
         let playerPoints = 0;
         let playerStats = { trickedOthers: 0, gotTricked: 0, correctAnswers: 0 };
 
-        // 1. استعادة من الذاكرة إذا كان طالع من قبل
         if (room.pointsHistory && room.pointsHistory[name] !== undefined) {
             playerPoints = room.pointsHistory[name];
             if (room.savedStats && room.savedStats[name]) playerStats = room.savedStats[name];
@@ -121,7 +118,6 @@ io.on('connection', (socket) => {
             if (room.savedVotes && room.savedVotes[name]) room.votes[socket.id] = room.savedVotes[name];
         }
 
-        // 2. تنظيف الجلسة القديمة المعلقة (Ghost Connection)
         let ghostId = Object.keys(room.players).find(id => room.players[id].name === name);
         if (ghostId) {
             playerPoints = room.players[ghostId].points;
@@ -142,7 +138,6 @@ io.on('connection', (socket) => {
 
         io.to(roomID).emit('updateState', { players: room.players, leader: room.leader });
 
-        // 🧠 إرسال اللاعب الراجع لنفس المرحلة اللي واقفه فيها اللعبة حالياً
         if (room.phase === 'bluff' && room.currentQuestionPayload) {
             socket.emit('startBluffPhase', room.currentQuestionPayload);
         } else if (room.phase === 'vote' && room.currentOptionsPayload) {
@@ -162,15 +157,20 @@ io.on('connection', (socket) => {
                 });
             }
 
-            let unplayedPool = pool.filter(q => !room.playedQuestions.includes(q.q));
+            // 🧠 السيرفر يتذكر أسئلة القائد عشان ما يكررها أبداً
+            let leaderName = normalizeString(room.players[room.leader].name);
+            if (!leaderMemory[leaderName]) leaderMemory[leaderName] = [];
+            
+            let unplayedPool = pool.filter(q => !leaderMemory[leaderName].includes(q.q));
 
+            // إذا خلصت الأسئلة، يصفر الذاكرة ويسحب من جديد
             if (unplayedPool.length < room.settings.maxRounds) {
-                room.playedQuestions = []; 
+                leaderMemory[leaderName] = []; 
                 unplayedPool = pool;
             }
 
             room.questions = shuffleArray([...unplayedPool]).slice(0, room.settings.maxRounds);
-            room.questions.forEach(q => room.playedQuestions.push(q.q));
+            room.questions.forEach(q => leaderMemory[leaderName].push(q.q));
 
             room.currentRound = 0;
             
@@ -219,6 +219,9 @@ io.on('connection', (socket) => {
     });
 
     function proceedToVoting(room) {
+        if (room.phase !== 'bluff') return; // 🛠️ منع التكرار البرمجي المزدوج
+        room.phase = 'vote';
+        
         const q = room.questions[room.currentRound - 1];
         let options = [q.a]; 
         
@@ -238,7 +241,6 @@ io.on('connection', (socket) => {
             }
         }
 
-        room.phase = 'vote';
         room.currentOptionsPayload = { options: shuffleArray(options) };
         io.to(room.id).emit('startVotingPhase', room.currentOptionsPayload);
     }
@@ -261,7 +263,9 @@ io.on('connection', (socket) => {
     });
 
     function calculateResults(room) {
+        if (room.phase !== 'vote') return; // 🛠️ منع التكرار (7/5) والتعليق نهائياً
         room.phase = 'result';
+        
         const q = room.questions[room.currentRound - 1];
         const isDecisive = (room.currentRound === room.settings.maxRounds);
         const correctPoints = isDecisive ? 100 : 50;
@@ -297,7 +301,11 @@ io.on('connection', (socket) => {
         io.to(room.id).emit('roundResult', { results: roundData, correctAns: q.a });
         io.to(room.id).emit('updateState', { players: room.players, leader: room.leader });
 
-        setTimeout(() => { startNextRound(room); }, 6000); 
+        setTimeout(() => { 
+            if (rooms[room.id] && rooms[room.id].phase === 'result') {
+                startNextRound(rooms[room.id]); 
+            }
+        }, 6000); 
     }
 
     function endGame(room) {
@@ -344,7 +352,6 @@ io.on('connection', (socket) => {
         if (sock.roomID && rooms[sock.roomID]) {
             const room = rooms[sock.roomID];
             
-            // 🧠 قبل لا نحذفه، نحفظ نقاطه وحالته عشان لو رجع
             if (room.players[sock.id]) {
                 room.pointsHistory = room.pointsHistory || {};
                 room.pointsHistory[room.players[sock.id].name] = room.players[sock.id].points;
@@ -371,7 +378,6 @@ io.on('connection', (socket) => {
             } else {
                 io.to(sock.roomID).emit('updateState', { players: room.players, leader: room.leader });
                 
-                // إذا طلع لاعب وموقف اللعب على قراره، اللعبة تمشي تلقائي بدونه
                 if (room.phase === 'bluff' && Object.keys(room.bluffs).length === Object.keys(room.players).length) {
                     proceedToVoting(room);
                 } else if (room.phase === 'vote' && Object.keys(room.votes).length === Object.keys(room.players).length) {
@@ -386,4 +392,3 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`🚀 السيرفر شغال على البورت ${PORT}`);
 });
-
