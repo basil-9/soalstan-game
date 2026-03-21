@@ -46,7 +46,6 @@
         .animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
         @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 0 0 hsla(27, 38%, 55%, 0); } 50% { box-shadow: 0 0 15px 5px hsla(27, 38%, 55%, 0.3); } }
         
-        /* التوهج الذهبي لمنصة الفوز */
         .gold-glow { box-shadow: 0 0 30px hsla(43, 96%, 56%, 0.3); }
         .stat-value { font-variant-numeric: tabular-nums; }
 
@@ -184,7 +183,7 @@
                 <div id="win-screen" class="hidden flex-col items-center w-full justify-center py-2">
                     <div id="winner-text" class="w-full"></div>
                     
-                    <div id="restart-btn-container" class="hidden flex-row gap-3 mt-8 w-full justify-center animate__animated animate__fadeInUp" style="animation-delay: 1.5s;">
+                    <div id="restart-btn-container" class="hidden flex-row gap-3 mt-8 w-full max-w-lg justify-center animate__animated animate__fadeInUp" style="animation-delay: 1.5s;">
                         <button onclick="exitGame()" class="bg-secondary/80 border border-white/10 text-white py-3 px-5 rounded-xl font-bold hover:bg-secondary transition active:scale-95 flex items-center justify-center gap-2 shadow-sm text-sm w-1/3">
                             الرئيسية 🏰
                         </button>
@@ -296,11 +295,18 @@
         return text.replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/[ىي]/g, 'ي').replace(/[\u064B-\u065F]/g, '').trim();
     }
 
+    // 🧠 الخوارزمية الذكية لصيد الإجابات المتشابهة (عجين = الدقيق / العجين)
     function isTooSimilar(a, b) {
         a = normalizeArabic(a); b = normalizeArabic(b);
         if(a === b) return true;
-        if(a.includes(b) && a.length - b.length <= 2) return true;
-        if(b.includes(a) && b.length - a.length <= 2) return true;
+        // فصل الكلمات لتتطابق مع أي جزء من الإجابة
+        let bParts = b.split(/[\s\/\-\\_،,]+/); 
+        for(let part of bParts) {
+            if(part.length >= 3 && a.includes(part)) return true;
+            if(part.length >= 3 && part.includes(a) && a.length >= 3) return true;
+        }
+        if(a.includes(b) && a.length - b.length <= 3) return true;
+        if(b.includes(a) && b.length - a.length <= 3) return true;
         let diff = 0; let min = Math.min(a.length, b.length);
         for(let i=0; i<min; i++) { if(a[i] !== b[i]) diff++; }
         diff += Math.abs(a.length - b.length);
@@ -567,8 +573,6 @@
         
         document.getElementById('q-content').innerHTML = `
             <h1 class="text-xl font-body font-bold text-white/90 leading-relaxed px-2 mb-3" style="direction: rtl; unicode-bidi: isolate;">${currentQuestionText}</h1>
-            <div class="text-success font-bold text-xl mb-6 font-body" style="direction: rtl; unicode-bidi: isolate;">✅ الجواب: ${d.correctAns}</div>
-            <div class="animate__animated animate__pulse animate__infinite text-gold text-sm">جاري تحضير الجولة... ⏳</div>
         `;
         
         let resHtml = "";
@@ -579,18 +583,20 @@
             let pts = p.pointsGained > 0 ? `<span class="text-success font-bold">(+${p.pointsGained})</span>` : `<span class="text-mutedForeground">(0)</span>`;
             let trick = p.tricked.length > 0 ? `<div class="text-destructive text-[11px] mt-1">خدع: ${p.tricked.join('، ')} 🦊</div>` : "";
             
-            let vote = `<div class="text-[11px] text-mutedForeground mt-1 font-body" style="direction:rtl; unicode-bidi:isolate;">اختار: <span class="text-white">${p.votedFor||"لم يصوت"}</span></div>`;
-            
-            if(p.pointsGained === 0) {
-                vote += `<div class="text-[11px] text-success mt-1 font-bold font-body" style="direction:rtl; unicode-bidi:isolate;">الجواب الصح: ${d.correctAns} ✅</div>`;
-            }
-
             resHtml += `<div class="bg-secondary/50 border border-border p-3 rounded-xl mb-2 text-sm text-right">
-                <span class="font-bold text-white">${p.name}</span> ${pts} ${vote} ${trick}
+                <span class="font-bold text-white">${p.name}</span> ${pts} <div class="text-[11px] text-mutedForeground mt-1 font-body" style="direction:rtl; unicode-bidi:isolate;">اختار: <span class="text-white">${p.votedFor||"لم يصوت"}</span></div> ${trick}
             </div>`;
         }
 
-        document.getElementById('result-detail').innerHTML = `<div class="mb-2 w-full">${resHtml}</div>`;
+        // 🟢 الإجابة الصحيحة تحت، بخط واضح وفخم
+        document.getElementById('result-detail').innerHTML = `
+            <div class="mb-4 w-full">${resHtml}</div>
+            <div class="bg-success/10 border border-success/30 p-4 rounded-2xl mt-4 w-full shadow-lg">
+                <span class="text-xs text-white/80 block mb-1">الجواب الصحيح هو:</span>
+                <span class="text-success text-2xl font-bold font-body" style="direction: rtl; unicode-bidi: isolate;">${d.correctAns} ✅</span>
+            </div>
+            <div class="animate__animated animate__pulse animate__infinite text-gold text-sm mt-5 mb-2">جاري تحضير الجولة... ⏳</div>
+        `;
 
         if(myRes.pointsGained > 0) playSnd('correct'); else playSnd('wrong');
         setTimeout(() => { ov.style.display = 'none'; document.getElementById('decisive-alert').classList.add('hidden'); }, 6000); 
@@ -630,7 +636,6 @@
         }
     }
 
-    // هنا برمجة شاشة الفوز الجديدة (من هو ملك الخدع؟)
     socket.on('gameOver', d => {
         document.getElementById('lobby-area').classList.add('hidden');
         document.getElementById('question-area').classList.add('hidden');
@@ -639,97 +644,93 @@
         let pArray = Object.values(d.players).sort((a,b) => b.points - a.points);
         
         let html = `
-            <div class="text-center mb-10 animate__animated animate__fadeInDown">
-                <h1 class="text-4xl sm:text-5xl md:text-6xl font-heading font-black shimmer-text mb-3 text-white">انتهت اللعبة!</h1>
-                <p class="text-mutedForeground text-xs sm:text-sm md:text-base font-medium">من هو ملك الخدع اليوم؟</p>
+            <div class="text-center mb-8 animate__animated animate__fadeInDown">
+                <h1 class="text-4xl sm:text-5xl font-heading font-black text-white mb-2">انتهت اللعبة!</h1>
+                <p class="text-mutedForeground text-sm sm:text-base font-medium">من هو ملك الخدع اليوم؟</p>
             </div>
             
-            <div class="flex items-end justify-center gap-4 sm:gap-6 mb-10">
+            <div class="flex items-end justify-center gap-3 sm:gap-6 mb-10 w-full max-w-lg mx-auto">
         `;
         
-        // المركز الثاني (يمين في اللغة العربية)
         if(pArray[1]) {
             html += `
-            <div class="flex flex-col items-center animate__animated animate__fadeInUp" style="animation-delay: 0.4s">
-                <div class="relative mb-3">
-                    <img src="${pArray[1].avatar}" class="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-[3px] border-slate-400 bg-card object-cover shadow-[0_0_15px_rgba(148,163,184,0.2)]">
-                    <div class="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-slate-400 border-2 border-background flex items-center justify-center text-background font-black text-xs shadow-md">2</div>
+            <div class="relative flex flex-col items-center animate__animated animate__fadeInUp mt-8 w-1/3" style="animation-delay: 0.4s">
+                <div class="relative z-20 -mb-6 sm:-mb-8">
+                    <img src="${pArray[1].avatar}" class="w-14 h-14 sm:w-20 sm:h-20 rounded-full border-[3px] border-slate-400 bg-card object-cover shadow-[0_0_15px_rgba(148,163,184,0.2)] relative z-10">
+                    <div class="absolute -top-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-slate-400 border-2 border-background flex items-center justify-center text-background font-black text-[10px] sm:text-xs shadow-md z-20">2</div>
                 </div>
-                <div class="w-28 sm:w-36 bg-secondary/60 border border-white/5 rounded-2xl py-3 flex flex-col items-center justify-center shadow-lg">
-                    <span class="font-bold text-foreground mb-0.5 text-xs sm:text-sm truncate w-11/12 text-center">${pArray[1].name}</span>
-                    <span class="text-gold font-black text-lg stat-value">${pArray[1].points}</span>
+                <div class="w-full pt-8 pb-3 px-1 sm:pt-10 sm:px-2 bg-secondary/60 border border-white/5 rounded-2xl flex flex-col items-center justify-center shadow-lg relative z-0">
+                    <span class="font-bold text-foreground mb-0.5 text-xs sm:text-sm truncate w-full text-center">${pArray[1].name}</span>
+                    <span class="text-slate-300 font-black text-sm sm:text-lg stat-value">${pArray[1].points}</span>
                 </div>
             </div>`;
         }
         
-        // المركز الأول (وسط)
         if(pArray[0]) {
             html += `
-            <div class="flex flex-col items-center relative z-10 animate__animated animate__zoomIn" style="animation-delay: 0.1s">
-                <div class="absolute -top-10 text-5xl drop-shadow-[0_0_15px_rgba(250,204,21,0.8)] z-20 animate__animated animate__bounceIn" style="animation-delay: 0.8s">👑</div>
-                <div class="relative mb-4">
-                    <img src="${pArray[0].avatar}" class="w-28 h-28 sm:w-32 sm:h-32 rounded-full border-[3px] border-gold bg-card object-cover gold-glow">
-                    <div class="absolute -top-1 -right-1 w-8 h-8 rounded-full bg-gold border-2 border-background flex items-center justify-center text-background font-black text-sm shadow-lg">1</div>
+            <div class="relative flex flex-col items-center z-10 animate__animated animate__zoomIn w-[40%]" style="animation-delay: 0.1s">
+                <div class="relative z-20 -mb-8 sm:-mb-10">
+                    <img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Apple-Color-Emoji/master/Images/Clothing/Crown.png" class="absolute -top-8 sm:-top-10 left-1/2 -translate-x-1/2 w-10 h-10 sm:w-14 sm:h-14 drop-shadow-[0_0_15px_rgba(250,204,21,0.8)] z-30 animate__animated animate__bounceIn" style="animation-delay: 0.8s">
+                    <img src="${pArray[0].avatar}" class="w-20 h-20 sm:w-28 sm:h-28 rounded-full border-[3px] border-gold bg-card object-cover gold-glow relative z-10">
+                    <div class="absolute -top-1 -right-1 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-gold border-2 border-background flex items-center justify-center text-background font-black text-xs sm:text-sm shadow-lg z-20">1</div>
                 </div>
-                <div class="w-36 sm:w-48 bg-gradient-to-b from-gold/10 to-card border border-gold/30 rounded-2xl py-4 flex flex-col items-center justify-center shadow-[0_10px_30px_-10px_rgba(250,204,21,0.3)]">
-                    <span class="font-bold text-foreground mb-0.5 text-sm sm:text-base truncate w-11/12 text-center">${pArray[0].name}</span>
-                    <span class="text-gold font-black text-2xl stat-value mb-0.5">${pArray[0].points}</span>
-                    <span class="text-[9px] text-gold/70 font-medium">البطل الحالي</span>
+                <div class="w-full pt-10 pb-4 px-1 sm:pt-12 sm:px-2 bg-card border border-gold/30 rounded-3xl flex flex-col items-center justify-center shadow-[0_10px_30px_-10px_rgba(250,204,21,0.3)] relative z-0">
+                    <span class="font-bold text-foreground mb-1 text-sm sm:text-base truncate w-full text-center">${pArray[0].name}</span>
+                    <span class="text-gold font-black text-xl sm:text-2xl stat-value mb-1">${pArray[0].points}</span>
+                    <span class="text-[9px] sm:text-[10px] text-gold/70 font-medium">البطل الحالي</span>
                 </div>
             </div>`;
         }
         
-        // المركز الثالث (يسار)
         if(pArray[2]) {
             html += `
-            <div class="flex flex-col items-center animate__animated animate__fadeInUp" style="animation-delay: 0.6s">
-                <div class="relative mb-3">
-                    <img src="${pArray[2].avatar}" class="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-[3px] border-amber-700 bg-card object-cover shadow-[0_0_15px_rgba(180,83,9,0.2)]">
-                    <div class="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-amber-600 border-2 border-background flex items-center justify-center text-background font-black text-xs shadow-md">3</div>
+            <div class="relative flex flex-col items-center animate__animated animate__fadeInUp mt-8 w-1/3" style="animation-delay: 0.6s">
+                <div class="relative z-20 -mb-6 sm:-mb-8">
+                    <img src="${pArray[2].avatar}" class="w-14 h-14 sm:w-20 sm:h-20 rounded-full border-[3px] border-amber-700 bg-card object-cover shadow-[0_0_15px_rgba(180,83,9,0.2)] relative z-10">
+                    <div class="absolute -top-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-amber-600 border-2 border-background flex items-center justify-center text-background font-black text-[10px] sm:text-xs shadow-md z-20">3</div>
                 </div>
-                <div class="w-28 sm:w-36 bg-secondary/60 border border-white/5 rounded-2xl py-3 flex flex-col items-center justify-center shadow-lg">
-                    <span class="font-bold text-foreground mb-0.5 text-xs sm:text-sm truncate w-11/12 text-center">${pArray[2].name}</span>
-                    <span class="text-gold font-black text-lg stat-value">${pArray[2].points}</span>
+                <div class="w-full pt-8 pb-3 px-1 sm:pt-10 sm:px-2 bg-secondary/60 border border-white/5 rounded-2xl flex flex-col items-center justify-center shadow-lg relative z-0">
+                    <span class="font-bold text-foreground mb-0.5 text-xs sm:text-sm truncate w-full text-center">${pArray[2].name}</span>
+                    <span class="text-amber-500 font-black text-sm sm:text-lg stat-value">${pArray[2].points}</span>
                 </div>
             </div>`;
         }
         
         html += `</div>`; 
 
-        // الألقاب (البادجات) أسفل المنصة
         if (d.titles.bluffer || d.titles.victim || d.titles.nerd) {
-            html += `<div class="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full animate__animated animate__fadeInUp" style="animation-delay: 1s">`;
+            html += `<div class="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-lg mx-auto animate__animated animate__fadeInUp" style="animation-delay: 1s">`;
             
             if (d.titles.victim) {
                 html += `
-                <div class="bg-secondary/40 border border-white/5 rounded-xl p-3 flex items-center justify-between shadow-sm">
-                    <div class="text-right">
-                        <div class="text-[9px] text-mutedForeground mb-0.5">الضحية (أكثر من تم خداعه)</div>
-                        <div class="font-bold text-xs text-foreground truncate max-w-[100px]">${d.titles.victim}</div>
+                <div class="bg-secondary/40 border border-white/5 rounded-2xl p-3 sm:p-4 flex items-center justify-between shadow-sm">
+                    <div class="text-right flex-1 overflow-hidden pr-2">
+                        <div class="text-[9px] sm:text-[10px] text-mutedForeground mb-1">الضحية (أكثر من تم خداعه)</div>
+                        <div class="font-bold text-xs sm:text-sm text-foreground truncate">${d.titles.victim}</div>
                     </div>
-                    <div class="text-2xl drop-shadow-md">🤡</div>
+                    <img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Apple-Color-Emoji/master/Images/Smileys/Clown%20Face.png" class="w-8 h-8 sm:w-10 sm:h-10 shrink-0 drop-shadow-md">
                 </div>`;
             }
             
             if (d.titles.bluffer) {
                 html += `
-                <div class="bg-secondary/40 border border-white/5 rounded-xl p-3 flex items-center justify-between shadow-sm">
-                    <div class="text-right">
-                        <div class="text-[9px] text-mutedForeground mb-0.5">الثعلب المكار (أكثر خدعة نجحت)</div>
-                        <div class="font-bold text-xs text-foreground truncate max-w-[100px]">${d.titles.bluffer}</div>
+                <div class="bg-secondary/40 border border-white/5 rounded-2xl p-3 sm:p-4 flex items-center justify-between shadow-sm">
+                    <div class="text-right flex-1 overflow-hidden pr-2">
+                        <div class="text-[9px] sm:text-[10px] text-mutedForeground mb-1">الثعلب المكار (أكثر خدعة نجحت)</div>
+                        <div class="font-bold text-xs sm:text-sm text-foreground truncate">${d.titles.bluffer}</div>
                     </div>
-                    <div class="text-2xl drop-shadow-md">🦊</div>
+                    <img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Apple-Color-Emoji/master/Images/Animals/Fox.png" class="w-8 h-8 sm:w-10 sm:h-10 shrink-0 drop-shadow-md">
                 </div>`;
             }
             
             if (d.titles.nerd) {
                 html += `
-                <div class="bg-secondary/40 border border-white/5 rounded-xl p-3 flex items-center justify-between shadow-sm">
-                    <div class="text-right">
-                        <div class="text-[9px] text-mutedForeground mb-0.5">نيرد الجولة (الأكثر دقة)</div>
-                        <div class="font-bold text-xs text-foreground truncate max-w-[100px]">${d.titles.nerd}</div>
+                <div class="bg-secondary/40 border border-white/5 rounded-2xl p-3 sm:p-4 flex items-center justify-between shadow-sm">
+                    <div class="text-right flex-1 overflow-hidden pr-2">
+                        <div class="text-[9px] sm:text-[10px] text-mutedForeground mb-1">نيرد الجولة (الأكثر دقة)</div>
+                        <div class="font-bold text-xs sm:text-sm text-foreground truncate">${d.titles.nerd}</div>
                     </div>
-                    <div class="text-2xl drop-shadow-md">🧠</div>
+                    <img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Apple-Color-Emoji/master/Images/Smileys/Brain.png" class="w-8 h-8 sm:w-10 sm:h-10 shrink-0 drop-shadow-md">
                 </div>`;
             }
             
@@ -740,7 +741,6 @@
         document.getElementById('win-screen').classList.remove('hidden');
         document.getElementById('win-screen').classList.add('flex');
         
-        // إظهار أزرار التحكم بالقائد
         if(isLeader) {
             document.getElementById('restart-btn-container').classList.remove('hidden');
             document.getElementById('restart-btn-container').classList.add('flex');
